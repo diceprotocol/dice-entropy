@@ -25,4 +25,4 @@
 - Production keeper should be pointed at `0xd8a0680e7699526b57140ed4eafdcc7219dc0a0c` (config updated locally)
 - Optional: register a long production hash chain (current live registration used for launch E2E)
 
-> Live v10 provider registration length is **1,000** (end sequence 1000). A longer production chain can be registered later with `registerFor`.
+> Live v10 provider registration length is **500,000** (end sequence 500003). Longer chains can be registered later with `registerFor`.

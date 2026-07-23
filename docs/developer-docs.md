@@ -911,8 +911,8 @@ contract MyGame is IEntropyConsumer {
     /// @notice Request a random number. Caller must send ETH for the fee.
     function play(bytes32 userRandom) external payable returns (uint64 seq) {
         // Get the required fee
-        uint128 fee = dice.getFee(provider);
-        require(msg.value >= fee, "Insufficient fee");
+        uint128 fee = dice.getFeeV2(provider, 100_000);
+        require(msg.value == fee, "Exact fee required");
 
         // Store context for the callback
         seq = dice.requestV2{value: fee}(provider, userRandom, 100_000);
@@ -1092,7 +1092,7 @@ Dice Protocol uses a **single flat fee model**:
 
 ```solidity
 // Onchain
-uint128 fee = dice.getFee(provider);
+uint128 fee = dice.getFeeV2(provider, 100_000);
 // or
 uint128 fee = dice.getFeeV2(provider, gasLimit);
 ```
@@ -1109,7 +1109,7 @@ All fee query functions return the same value regardless of provider or gas limi
 The fee must be sent as `msg.value` with the `requestV2()` call:
 
 ```solidity
-uint128 fee = dice.getFee(provider);
+uint128 fee = dice.getFeeV2(provider, 100_000);
 dice.requestV2{value: fee}(provider, userRandom, gasLimit);
 ```
 
@@ -1342,7 +1342,7 @@ The contract is deployed and verified on Robinhood Chain Mainnet:
 | Vault | `0x918EAF0b2589710B0D85ef48C12a343E68263841` |
 | Admin | `0x4ACD2C88a239a924E47Fc4995114ca1Bb0CA3CaD` |
 | Default Provider | `0x8741b8a825644D9Ef18Faf2DAB5e9b47B900F2b6` |
-| Hash Chain Length | 1,000 values currently registered on v10 (end sequence 1000); admin can register a longer chain later via registerFor |
+| Hash Chain Length | **500,000** values registered on live v10 (end sequence 500003); longer chains can be registered via `registerFor` |
 | Example Callback Gas Limit | 200,000 |
 
 ### Deploying a New Instance
@@ -1401,7 +1401,7 @@ forge create DiceEntropy \
 | 4 | `prefillRequestStorage` | `true` |
 | 5 | `vault` | `0x918E...` |
 | 6 | `providerCommitment` | `0x3ee6b22e...` (hash chain root x₀) |
-| 7 | `providerChainLength` | `1000` (live v10; longer supported) |
+| 7 | `providerChainLength` | `500000` (live v10 registered length) |
 | 8 | `providerCommitmentMetadata` | `0x` (empty) |
 
 If `providerChainLength > 0`, the provider is auto-registered in the constructor — no separate `registerFor()` transaction needed.

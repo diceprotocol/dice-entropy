@@ -44,7 +44,7 @@ Dice Protocol is the live RNG oracle on Robinhood Chain, operating under an excl
 
 ## Features
 
-- **Commit-reveal RNG** — Hash-chain commitment scheme with Keccak256. Provider pre-commits to a hash chain (live v10 currently registered with 1,000 values; longer chains supported); each request reveals the next.
+- **Commit-reveal RNG** — Hash-chain commitment scheme with Keccak256. Provider pre-commits to a hash chain (live v10 currently registered with 500,000 values; longer chains supported); each request reveals the next.
 - **Unbiased** — Neither provider nor user can influence the outcome. Random as long as either party is honest.
 - **Verifiable on-chain** — Every reveal is independently checkable via `keccak256(reveal) == previousCommitment`.
 - **Low latency** — ~2–5 seconds per request (1 block confirmation on Robinhood Chain).
@@ -362,7 +362,7 @@ console.log('Request status:', request);
 | Block Explorer     | [https://robinhoodchain.blockscout.com](https://robinhoodchain.blockscout.com) |
 | L2 Type            | Arbitrum Nitro                                     |
 | Request Fee        | 0.000025 ETH (25,000,000,000,000 wei)             |
-| Hash Chain Length | 1,000 values currently registered on v10 (end sequence 1000); admin can register a longer chain later via registerFor                                      |
+| Hash Chain Length | **500,000** values registered on live v10 (end sequence 500003); longer chains can be registered later via registerFor                                      |
 | Hash Algorithm     | Keccak256                                          |
 | Example callback gas | 200,000                                            |
 | Max Gas Limit      | 655,350,000 (`uint16.max × 10,000`)               |

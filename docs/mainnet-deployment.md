@@ -15,7 +15,7 @@
 
 ## Provider
 - **Address**: `0x8741b8a825644D9Ef18Faf2DAB5e9b47B900F2b6` (keeper)
-- **Hash Chain**: 1,000 values currently registered on v10
+- **Hash Chain**: 500,000 values registered on live v10
 - **Commitment**: `0x3ee6b22e39df32c239ead8bd91e9378e9c65da12e6ec17b782f43e825c75d713`
 - **Example callback gas**: 200,000
 - **Auto-registered**: Yes (in constructor)
@@ -42,4 +42,4 @@
 
 If a request is not revealed within about 60–90 seconds (`refundDelayBlocks = 6` L1 blocks on Robinhood/Arbitrum Nitro), the original requester can call `refundRequest(provider, sequenceNumber)` and reclaim the exact fee paid.
 
-> Live v10 provider registration length is **1,000** (end sequence 1000). A longer production chain can be registered later with `registerFor`.
+> Live v10 provider registration length is **500,000** (end sequence 500003). Longer chains can be registered later with `registerFor`.
