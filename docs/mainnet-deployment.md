@@ -26,7 +26,7 @@
 
 ## E2E Verified
 1. Consumer requests randomness (pays 0.000025 ETH)
-2. Tyche detects `Requested` event within ~3.5 seconds
+2. Tyche detects `Requested` event within ~1–3 seconds typically
 3. Tyche computes reveal value and submits `revealWithCallback`
 4. Consumer's `entropyCallback()` fires with random number
 5. Fees accumulate in contract (withdrawable to vault by admin)

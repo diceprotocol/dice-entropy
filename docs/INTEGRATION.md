@@ -91,7 +91,7 @@ const seqNum = await dice.requestRandom(
 );
 
 console.log('Request sequence:', seqNum);
-// Tyche auto-reveals within ~3.5 seconds
+// Tyche auto-reveals within ~1–3 seconds typically
 // Your contract's entropyCallback() fires automatically
 ```
 
@@ -112,7 +112,7 @@ console.log('Request sequence:', seqNum);
 | RPC URL | `https://rpc.mainnet.chain.robinhood.com` |
 | Block Explorer | `https://robinhoodchain.blockscout.com` |
 | Fee per Request | 0.000025 ETH (25,000,000,000,000 wei) |
-| Reveal Time | ~3.5 seconds |
+| Reveal Time | ~1–3 seconds typical |
 
 ## How It Works
 
@@ -167,7 +167,7 @@ Pass a callback gas limit that covers your callback logic. The examples use 200,
 |---------|---------------|-----------|
 | Deployment | Native to Robinhood Chain | External |
 | Fee model | Flat 0.000025 ETH | Variable |
-| Reveal time | ~3.5 seconds | Varies |
+| Reveal time | ~1–3 seconds typical | Varies |
 | Verifiability | On-chain Keccak256 | Varies |
 | Callback | Automatic | Manual polling |
 | Infrastructure | Self-hosted keeper | Third-party |

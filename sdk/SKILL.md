@@ -19,7 +19,7 @@ This SKILL.md is written for **agents**, not just humans. An agent reading this 
 | Fee rule | `msg.value` must equal required fee exactly. Underpay **and** overpay both revert with `InsufficientFee()` |
 | Refund delay | `6` L1 blocks (~60–90 seconds wall-clock) |
 | Refund method | `refundRequest(provider, sequenceNumber)` — requester only |
-| Latency | ~3.5 seconds typical (request → keeper reveal) |
+| Latency | ~1–3 seconds typical (request → keeper reveal) |
 | Package | `@diceprotocol/sdk` |
 | License | Apache-2.0 (Pyth Entropy attribution) |
 | Explorer | https://robinhoodchain.blockscout.com/address/0xd8a0680e7699526b57140ed4eafdcc7219dc0a0c |
@@ -120,7 +120,7 @@ const seqNum = await dice.requestRandom(
   200000  // gasLimit
 );
 
-// 3. Listen for reveal (~3.5s typical)
+// 3. Listen for reveal (~1–3s typical)
 dice.onReveal((event) => {
   if (event.sequenceNumber === seqNum) {
     console.log('Random number:', event.randomNumber);
@@ -173,7 +173,7 @@ cast send 0xd8a0680e7699526b57140ed4eafdcc7219dc0a0c \
 
 1. **Always pay the exact fee.** Read fee first (`getFee` / `getFeeV2` / `getProtocolFee`). `msg.value` must equal it exactly.
 2. **Generate `userRandomNumber` locally** with a CSPRNG. This is the agent's contribution — provider cannot unilaterally set the final randomness.
-3. **Wait ~3.5 seconds** for keeper reveal. Use `onReveal()` or poll `Revealed` logs / `getRequestV2`.
+3. **Wait ~1–3 seconds typical** for keeper reveal. Use `onReveal()` or poll `Revealed` logs / `getRequestV2`.
 4. **If reveal never comes:** after ~60–90s call `refundRequest(provider, sequenceNumber)` as the original requester.
 5. **Verify randomness onchain** from request/reveal contributions when needed.
 

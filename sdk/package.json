@@ -1,6 +1,6 @@
 {
   "name": "@diceprotocol/sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "TypeScript SDK for Dice Protocol v10 \u2014 trustless commit-reveal RNG on Robinhood Chain",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
