@@ -173,7 +173,7 @@ cast send 0xd8a0680e7699526b57140ed4eafdcc7219dc0a0c \
 
 1. **Always pay the exact fee.** Read fee first (`getFee` / `getFeeV2` / `getProtocolFee`). `msg.value` must equal it exactly.
 2. **Generate `userRandomNumber` locally** with a CSPRNG. This is the agent's contribution — provider cannot unilaterally set the final randomness.
-3. **Wait ~1–3 seconds typical** for keeper reveal. Use `onReveal()` or poll `Revealed` logs / `getRequestV2`.
+3. **Wait ~1–3 seconds typically** for keeper reveal. Use `onReveal()` or poll `Revealed` logs / `getRequestV2`.
 4. **If reveal never comes:** after ~60–90s call `refundRequest(provider, sequenceNumber)` as the original requester.
 5. **Verify randomness onchain** from request/reveal contributions when needed.
 
