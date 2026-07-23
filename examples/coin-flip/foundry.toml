@@ -1,0 +1,11 @@
+[profile.default]
+src = "contracts"
+out = "out"
+libs = ["/root/dice-protocol/contracts/lib"]
+remappings = [
+    "@openzeppelin/=/root/dice-protocol/contracts/lib/openzeppelin-contracts/contracts/",
+    "@excessively-safe-call/=/root/dice-protocol/contracts/lib/ExcessivelySafeCall/",
+    "@dice-protocol/=/root/dice-protocol/contracts/src/",
+]
+solc_version = "0.8.24"
+allow_paths = ["/root/dice-protocol/contracts"]

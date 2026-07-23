@@ -1,0 +1,44 @@
+# Dice Protocol — tyche Dockerfile
+# Multi-stage build for the Rust randomness provider
+
+FROM rust:1.97-slim as builder
+
+# Install build deps
+RUN apt-get update && apt-get install -y \
+    libssl-dev pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+# Copy source
+COPY . .
+
+# Build release
+RUN cargo build --release
+
+# ---- Runtime image ----
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y \
+    libssl3 ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy binary
+COPY --from=builder /build/target/release/tyche /app/tyche
+
+# Copy migrations
+COPY --from=builder /build/migrations /app/migrations
+
+# Copy config sample
+COPY --from=builder /build/config/dice-config.sample.yaml /app/config.sample.yaml
+
+# Expose API port
+EXPOSE 34000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD curl -f http://localhost:34000/ready || exit 1
+
+ENTRYPOINT ["/app/tyche"]

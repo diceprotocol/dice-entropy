@@ -1,0 +1,40 @@
+# SAMPLE ONLY — never commit real secrets
+provider:
+  uri: "https://tyche.diceprotocol.world"
+  address: "0x8741b8a825644D9Ef18Faf2DAB5e9b47B900F2b6"
+  private_key:
+    value: "0xYOUR_PROVIDER_PRIVATE_KEY"
+  secret:
+    value: "YOUR_PROVIDER_SECRET_HEX"
+  chain_length: 500000
+
+keeper:
+  private_key:
+    value: "0xYOUR_KEEPER_PRIVATE_KEY"
+
+database:
+  url: "sqlite:////path/to/tyche.db"
+
+chains:
+  4663:
+    geth_rpc_addr: "https://rpc.mainnet.chain.robinhood.com"
+    fallback_rpc_addr: null
+    ws_rpc_addr: null
+    contract_addr: "0xd8a0680e7699526b57140ed4eafdcc7219dc0a0c"
+    reveal_delay_blocks: 0
+    confirmed_block_status: "Latest"
+    gas_limit: 500000
+    legacy_tx: true
+    backlog_range: 500
+    block_delays: [2]
+    fee: 25000000000000
+    sync_fee_only_on_register: true
+    commitments: []
+
+api:
+  host: "0.0.0.0"
+  port: 34000
+
+metrics:
+  enabled: true
+  path: "/metrics"

@@ -1,0 +1,52 @@
+# Build artifacts
+contracts/out/
+contracts/cache/
+contracts/lib/
+
+# Rust
+fortuna/target/
+fortuna/.env
+fortuna/config.yaml
+
+# Node
+sdk/node_modules/
+sdk/dist/
+
+# Secrets — NEVER commit
+*.env
+*.env.local
+*.envrc
+*.key
+*.pem
+secrets/
+
+# Deployment artifacts (may contain constructor args with secrets)
+contracts/broadcast/
+
+# Database
+*.db
+*.db-journal
+
+# OS
+.DS_Store
+tyche/target/
+contracts/out/
+tyche/config/dice-config.yaml
+tyche/config/*.yaml
+!tyche/config/*.sample.yaml
+data/
+docs/system-status-july-17.md
+docs/system-status*.md
+
+# Local stress scripts / secrets
+stress_test*.py
+*.env
+tyche/config/dice-config.yaml
+
+# launch safety
+**/.env
+**/.npmrc
+**/config.yaml
+backups/
+**/hash-chain*.json
+internal/

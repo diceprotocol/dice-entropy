@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎲 Dice Protocol — Coin Flip</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'SF Pro Display', -apple-system, sans-serif; background: #0a0a0f; color: #fff; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .container { max-width: 480px; width: 100%; padding: 20px; }
+        .card { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 20px; padding: 32px; border: 1px solid #333; }
+        h1 { text-align: center; font-size: 24px; margin-bottom: 4px; }
+        h2 { text-align: center; font-size: 14px; color: #666; margin-bottom: 32px; }
+        .balance { text-align: center; font-size: 16px; color: #aaa; margin-bottom: 24px; }
+        .coin { width: 120px; height: 120px; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; font-size: 64px; transition: transform 0.6s; }
+        .coin.flipping { animation: spin 0.6s linear infinite; }
+        @keyframes spin { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
+        .result { text-align: center; font-size: 20px; margin-bottom: 16px; min-height: 28px; }
+        .result.win { color: #00ff88; }
+        .result.lose { color: #ff4466; }
+        .result.pending { color: #ffaa00; }
+        .buttons { display: flex; gap: 12px; margin-bottom: 24px; }
+        .btn { flex: 1; padding: 16px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-heads { background: #2563eb; color: #fff; }
+        .btn-tails { background: #7c3aed; color: #fff; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+        .bet-input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #333; background: #0a0a0f; color: #fff; font-size: 16px; margin-bottom: 16px; }
+        .proof { background: #0f0f1a; border-radius: 10px; padding: 16px; font-family: monospace; font-size: 12px; color: #aaa; word-break: break-all; }
+        .proof-label { color: #666; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+        .history { margin-top: 24px; }
+        .history-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1a1a2e; font-size: 14px; }
+        .connect { width: 100%; padding: 12px; background: #1a1a2e; border: 1px solid #333; border-radius: 10px; color: #fff; cursor: pointer; margin-bottom: 24px; }
+        .status { text-align: center; font-size: 12px; color: #666; margin-top: 16px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>🎲 Dice Protocol</h1>
+            <h2>Provably Fair Coin Flip</h2>
+
+            <button class="connect" id="connectBtn">Connect Wallet</button>
+            <div class="balance" id="balance"></div>
+
+            <div class="coin" id="coin">🪙</div>
+            <div class="result" id="result"></div>
+
+            <input type="number" class="bet-input" id="betAmount" placeholder="Bet amount (ETH)" step="0.001" value="0.001" />
+
+            <div class="buttons">
+                <button class="btn btn-heads" id="headsBtn" disabled>Heads</button>
+                <button class="btn btn-tails" id="tailsBtn" disabled>Tails</button>
+            </div>
+
+            <div class="proof" id="proof" style="display:none;">
+                <div class="proof-label">Provably Fair Proof</div>
+                <div id="proofContent"></div>
+            </div>
+
+            <div class="history" id="history">
+                <div class="proof-label" style="margin-bottom: 12px;">Recent Flips</div>
+                <div id="historyList"></div>
+            </div>
+
+            <div class="status" id="status">
+                Contract: 0x2Cd9...F36c · RH Testnet (46630)
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        const DICE_ADDRESS = '0x2Cd96e21f3f3008ec6daFb464F12fa91C54DF36c';
+        const PROVIDER = '0x8741b8a825644D9Ef18Faf2DAB5e9b47B900F2b6';
+        const RPC_URL = 'https://rpc.testnet.chain.robinhood.com/rpc';
+        const CHAIN_ID = 46630;
+
+        // ABI subset for the coin flip contract (deploy after)
+        const COIN_FLIP_ABI = [
+            {"inputs":[{"type":"address"},{"type":"address"}],"stateMutability":"nonpayable","type":"constructor"},
+            {"inputs":[{"name":"guess","type":"uint8"},{"name":"userRandom","type":"bytes32"}],"name":"flip","outputs":[{"name":"","type":"uint64"}],"stateMutability":"payable","type":"function"},
+            {"inputs":[{"name":"seq","type":"uint64"}],"name":"getGame","outputs":[{"name":"player","type":"address"},{"name":"guess","type":"uint8"},{"name":"betAmount","type":"uint256"},{"name":"state","type":"uint8"},{"name":"randomNumber","type":"bytes32"}],"stateMutability":"view","type":"function"},
+            {"inputs":[{"name":"seq","type":"uint64"}],"name":"verifyRandomness","outputs":[{"name":"randomNumber","type":"bytes32"},{"name":"result","type":"uint8"}],"stateMutability":"view","type":"function"},
+            {"anonymous":false,"inputs":[{"indexed":true,"name":"sequence","type":"uint64"},{"indexed":true,"name":"player","type":"address"},{"name":"guess","type":"uint8"},{"name":"betAmount","type":"uint256"}],"name":"Flipped","type":"event"},
+            {"anonymous":false,"inputs":[{"indexed":true,"name":"sequence","type":"uint64"},{"indexed":true,"name":"player","type":"address"},{"name":"result","type":"uint8"},{"name":"state","type":"uint8"},{"name":"randomNumber","type":"bytes32"}],"name":"Resolved","type":"event"}
+        ];
+
+        let provider, signer, coinFlip, account;
+        let flipCoinAddress = ''; // Set after deploying CoinFlip contract
+
+        document.getElementById('connectBtn').onclick = connect;
+
+        async function connect() {
+            if (typeof window.ethereum === 'undefined') {
+                alert('MetaMask not found. Install MetaMask to play.');
+                return;
+            }
+            try {
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                provider = new ethers.BrowserProvider(window.ethereum);
+                signer = await provider.getSigner();
+                account = await signer.getAddress();
+
+                // Switch to RH Testnet
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: '0xb666' }],
+                    });
+                } catch (e) {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId: '0xb666',
+                            chainName: 'Robinhood Chain Testnet',
+                            nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                            rpcUrls: [RPC_URL],
+                            blockExplorerUrls: ['https://explorer.testnet.chain.robinhood.com'],
+                        }],
+                    });
+                }
+
+                document.getElementById('connectBtn').textContent = `${account.slice(0,6)}...${account.slice(-4)}`;
+                document.getElementById('headsBtn').disabled = false;
+                document.getElementById('tailsBtn').disabled = false;
+
+                await updateBalance();
+            } catch (e) {
+                console.error(e);
+                alert('Connection failed: ' + e.message);
+            }
+        }
+
+        async function updateBalance() {
+            if (!signer) return;
+            const bal = await provider.getBalance(account);
+            document.getElementById('balance').textContent = `Balance: ${ethers.formatEther(bal)} ETH`;
+        }
+
+        async function doFlip(guess) {
+            if (!signer) return;
+            const bet = document.getElementById('betAmount').value;
+            if (!bet || bet <= 0) { alert('Enter a valid bet'); return; }
+
+            const userRandom = '0x' + Array.from(crypto.getRandomValues(new Uint8Array(32)))
+                .map(b => b.toString(16).padStart(2, '0')).join('');
+
+            document.getElementById('coin').classList.add('flipping');
+            document.getElementById('result').className = 'result pending';
+            document.getElementById('result').textContent = 'Requesting randomness...';
+            document.getElementById('headsBtn').disabled = true;
+            document.getElementById('tailsBtn').disabled = true;
+
+            try {
+                // NOTE: CoinFlip contract needs to be deployed first.
+                // This is a demo — in production, point at the deployed CoinFlip address.
+                alert('Deploy CoinFlip contract first, then set flipCoinAddress in the script.');
+                return;
+            } catch (e) {
+                console.error(e);
+                document.getElementById('result').className = 'result lose';
+                document.getElementById('result').textContent = 'Error: ' + e.message;
+            } finally {
+                document.getElementById('coin').classList.remove('flipping');
+                document.getElementById('headsBtn').disabled = false;
+                document.getElementById('tailsBtn').disabled = false;
+            }
+        }
+
+        document.getElementById('headsBtn').onclick = () => doFlip(0);
+        document.getElementById('tailsBtn').onclick = () => doFlip(1);
+    </script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+[Unit]
+Description=Dice Protocol — Tyche Keeper Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tyche
+Group=tyche
+WorkingDirectory=/root/dice-protocol/tyche
+Environment=RUST_LOG=info
+Environment=TYCHE_CONFIG=config/dice-config.yaml
+ExecStart=/root/dice-protocol/tyche/target/release/tyche run
+Restart=always
+RestartSec=10
+KillSignal=SIGINT
+TimeoutStopSec=30
+
+# --- Security hardening ---
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+RestrictNamespaces=true
+RemoveIPC=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+SystemCallArchitectures=native
+
+# tyche needs read access to /root/dice-protocol (binary, config)
+# and write access to /root/dice-protocol/data (sqlite db)
+# ProtectHome=read-only makes /root readable; this grants write to data dir
+ReadWritePaths=/root/dice-protocol/data
+
+# Network: outbound HTTPS/WSS to RPC + inbound localhost:34000
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target

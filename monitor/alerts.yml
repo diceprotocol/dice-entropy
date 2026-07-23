@@ -1,0 +1,44 @@
+# Dice Protocol — Prometheus Alert Rules
+
+groups:
+  - name: dice-protocol
+    rules:
+      # Keeper wallet balance too low
+      - alert: LowKeeperBalance
+        expr: dice_keeper_balance < 100000000000000000
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Keeper wallet balance below 0.1 ETH"
+          description: "Keeper wallet {{ $labels.wallet }} has balance {{ $value }} wei. Fund immediately."
+
+      # Hash chain running low
+      - alert: LowHashChainRemaining
+        expr: dice_hash_chain_remaining / dice_hash_chain_total < 0.1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Hash chain below 10% remaining"
+          description: "Provider {{ $labels.provider }} has < 10% of hash chain remaining. Replenish soon."
+
+      # Reveal latency high
+      - alert: HighRevealLatency
+        expr: histogram_quantile(0.95, rate(dice_reveal_latency_seconds_bucket[5m])) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Reveal latency > 10s (95th percentile)"
+          description: "Average time from request to reveal exceeds 10 seconds."
+
+      # tyche down
+      - alert: tycheDown
+        expr: up{job="tyche"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "tyche provider is down"
+          description: "tyche has been unreachable for 1 minute."

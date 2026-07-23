@@ -1,0 +1,64 @@
+# Dice Protocol — Production Stack
+# Full monitoring: tyche + Prometheus + Grafana
+# Run: docker compose -f docker-compose.prod.yml up -d
+
+version: '3.8'
+
+services:
+  tyche:
+    build:
+      context: ./tyche
+      dockerfile: Dockerfile.dice
+    container_name: dice-tyche
+    restart: always
+    ports:
+      - "34000:34000"
+    environment:
+      - RUST_LOG=info
+      - DATABASE_URL=sqlite:///app/tyche.db
+    volumes:
+      - ./tyche/config.yaml:/app/config.yaml:ro
+      - tyche-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:34000/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - dice-net
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: dice-prometheus
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitor/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - dice-net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: dice-grafana
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=dice-admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - dice-net
+
+volumes:
+  tyche-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  dice-net:
+    driver: bridge

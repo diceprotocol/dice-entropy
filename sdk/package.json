@@ -1,0 +1,59 @@
+{
+  "name": "@diceprotocol/sdk",
+  "version": "1.0.0",
+  "description": "TypeScript SDK for Dice Protocol v10 \u2014 trustless commit-reveal RNG on Robinhood Chain",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc && cp src/abi.json dist/abi.json",
+    "test": "node --test dist/test.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "dice",
+    "randomness",
+    "oracle",
+    "rng",
+    "robinhood-chain",
+    "blockchain"
+  ],
+  "license": "Apache-2.0",
+  "author": "Dice Protocol",
+  "dependencies": {
+    "ethers": "^6.13.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "@types/node": "^20.0.0"
+  },
+  "files": [
+    "dist",
+    "src/abi.json",
+    "src/index.ts",
+    "solidity",
+    "README.md",
+    "SKILL.md",
+    "LICENSE",
+    "NOTICE",
+    "package.json"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/diceprotocol/dice-protocol-sdk.git"
+  },
+  "homepage": "https://diceprotocol.world",
+  "bugs": {
+    "url": "https://github.com/diceprotocol/dice-protocol-sdk/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./abi.json": "./dist/abi.json",
+    "./package.json": "./package.json"
+  }
+}

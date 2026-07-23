@@ -1,0 +1,19 @@
+[Unit]
+Description=Dice Protocol — Tyche Keeper Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/dice-protocol/tyche
+Environment=RUST_LOG=info
+Environment=TYCHE_CONFIG=config/dice-config.yaml
+ExecStart=/root/dice-protocol/tyche/target/release/tyche run
+Restart=always
+RestartSec=10
+KillSignal=SIGINT
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

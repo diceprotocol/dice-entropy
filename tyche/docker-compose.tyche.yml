@@ -1,0 +1,34 @@
+# Dice Protocol — Docker Compose
+# Run: docker compose -f docker-compose.dice.yml up -d
+
+version: '3.8'
+
+services:
+  tyche:
+    build:
+      context: .
+      dockerfile: Dockerfile.dice
+    container_name: dice-tyche
+    restart: always
+    ports:
+      - "34000:34000"
+    environment:
+      - RUST_LOG=info
+      - DATABASE_URL=sqlite:///app/tyche.db
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - tyche-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:34000/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - dice-net
+
+volumes:
+  tyche-data:
+
+networks:
+  dice-net:
+    driver: bridge
