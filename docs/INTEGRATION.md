@@ -167,7 +167,7 @@ Pass a callback gas limit that covers your callback logic. The examples use 200,
 |---------|---------------|-----------|
 | Deployment | Native to Robinhood Chain | External |
 | Fee model | Flat 0.000025 ETH | Variable |
-| Reveal time | ~1–3 seconds typical | Varies |
+| Reveal time | ~1–3 seconds typical | Not guaranteed; depends on keeper/RPC |
 | Verifiability | On-chain Keccak256 | Varies |
 | Callback | Automatic | Manual polling |
 | Infrastructure | Self-hosted keeper | Third-party |
