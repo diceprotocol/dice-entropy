@@ -143,7 +143,7 @@ dice-protocol/
 │   ├── developer-docs.md             # API reference & quickstart
 │   ├── mainnet-deployment.md         # Mainnet deployment record
 │   ├── testnet-deployment.md         # Testnet deployment record
-│   ├── security-audit.md             # Audit report
+│   ├── security-audit.md             # Internal security review notes
 │   ├── project-status.md             # Current project status
 │   └── ROADMAP.md                    # Development roadmap
 │
@@ -539,7 +539,7 @@ The DiceEntropy contract has been audited with Slither 0.11.5 and a manual revie
 | Low      | 2     | Mitigated (gas griefing via `defaultGasLimit`; `block.timestamp` PRNG acceptable) |
 | Info     | 3     | Acknowledged |
 
-Full report: [docs/security-audit.md](docs/security-audit.md)
+Review notes: [docs/security-audit.md](docs/security-audit.md)
 
 ### Security Properties
 
@@ -566,7 +566,7 @@ Full report: [docs/security-audit.md](docs/security-audit.md)
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Deployment pipeline and infrastructure requirements |
 | [docs/mainnet-deployment.md](docs/mainnet-deployment.md) | Mainnet deployment record |
 | [docs/testnet-deployment.md](docs/testnet-deployment.md) | Testnet deployment record |
-| [docs/security-audit.md](docs/security-audit.md) | Security audit report |
+| [docs/security-audit.md](docs/security-audit.md) | Internal security review notes |
 | [docs/project-status.md](docs/project-status.md) | Current project status |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Development roadmap |
 
