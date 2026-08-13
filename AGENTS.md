@@ -5,7 +5,7 @@
 - **Stage:** DiceEntropy v10 is live on Robinhood Chain mainnet. Public repository consistency remediation is published and verified.
 - **Environment:** This public GitHub repository contains the immutable v10 contract source, SDK snapshot, reference keeper source, examples, and public documentation. Live operations use separate private configuration.
 - **Goal:** Keep every active public file aligned to deployed v10 and avoid exposing operational details.
-- **Next step:** Monitor public surfaces and add automated stale-value checks to CI. npm documentation still requires a `1.0.3` patch after registry authentication.
+- **Next step:** Daily public consistency watchdog is live (`dice-public-consistency-daily`, 09:00 UTC, silent-green to Infra). npm `1.0.3` and legacy-domain redirect remain account-gated.
 
 ## Architecture
 
