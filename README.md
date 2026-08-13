@@ -119,7 +119,7 @@ dice-protocol/
 │
 ├── tyche/                   # Rust auto-reveal keeper service
 │   ├── src/
-│   │   ├── api/                      # REST API (port 34000)
+│   │   ├── api/                      # Optional operational API
 │   │   ├── chain/                    # Blockchain reader/adapter
 │   │   ├── keeper/                   # Reveal loop & tx submission
 │   │   └── command/                  # CLI verbs (run, setup-provider)
@@ -504,7 +504,7 @@ RUST_LOG=INFO cargo run -- run --config config/dice-config.yaml
 
 ### REST API
 
-Tyche exposes a monitoring API on port 34000:
+Tyche may expose an operational monitoring API in private deployments. Integrators should use the public contract, events, SDK, proof pages, and status surface rather than relying on an internal service endpoint:
 
 ```
 GET /v1/chains/{chain_id}/revelations/{sequence}   # Get reveal value for a sequence
