@@ -24,7 +24,7 @@ contracts/src/
 The main contract handles:
 - Provider registration (admin-only via `registerFor()`)
 - Auto-registration in constructor (for exclusive provider model)
-- Request handling (`requestV2()` with 3 overloads)
+- Request handling through `requestV2(address,bytes32,uint32)`; three legacy overloads remain in the ABI but revert
 - Reveal verification (`reveal()`, `revealWithCallback()`)
 - Fee accounting (single-fee model, 100% to vault)
 - Admin functions (`setFee()`, `withdrawFees()`, `setDefaultGasLimit()`)
@@ -37,7 +37,7 @@ The main contract handles:
 | V2 API only | Simplified surface area, no legacy support |
 | Single fee model | 0.000025 ETH flat, no protocol/provider split |
 | Exclusive provider | Admin controls who can provide randomness |
-| 50k hash chain | ~5,000 days at 100 requests/day |
+| 500k hash chain (live v10) | ~5,000 days at 100 requests/day |
 | No blockhash in result | Simplifies verification, uses 2-party commit-reveal |
 | Auto-register in constructor | Provider active at deployment, no separate tx |
 
@@ -56,10 +56,10 @@ tyche/src/
 │   └── submitter.rs      # Transaction submission (revealWithCallback)
 ├── state.rs              # Hash chain state management (PebbleHashChain)
 ├── config.rs             # YAML configuration parser
-├── api/                  # HTTP API server (port 34000)
+├── api/                  # Optional operational API
 │   ├── explorer.rs       # Request/reveal explorer endpoints
 │   └── revelation.rs     # Revelation query endpoints
-├── history.rs            # SQLite persistence layer
+├── history.rs            # Durable request history
 └── lib.rs                # Shared types
 ```
 
@@ -69,7 +69,7 @@ tyche/src/
 2. **Backlog processing**: Scans from last-processed block to current block
 3. **Live mode**: Polls for new blocks in 100-block batches
 4. **Event handling**: For each `Requested` event, computes the reveal value and submits a `revealWithCallback` transaction
-5. **Persistence**: All requests and reveals are logged to SQLite
+5. **Persistence**: Request and reveal progress is stored for recovery and observability
 
 ### Hash Chain Computation
 
@@ -104,6 +104,6 @@ Admin (Cold)                Vault (Cold)              Keeper (Hot)
 
 1. **Cryptographic**: Keccak256 hash chain — provider can't precompute, user can't bias
 2. **Economic**: Flat fee covers gas + margin, keeper funded separately
-3. **Operational**: systemd auto-restart, three-wallet separation
+3. **Operational**: monitored restart and role-separated wallets
 4. **Contract-level**: Immutable, gas-capped callbacks, `excessivelySafeCall` pattern
 5. **Infrastructure**: Private keys never committed, config gitignored, separate Git identity

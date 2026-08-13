@@ -1,11 +1,11 @@
 # Dice Protocol
 
-> Trustless commit-reveal randomness oracle for Robinhood Chain. Verifiable, unbiased on-chain RNG for gaming, NFTs, prediction markets, and DeFi.
+> Verifiable commit-reveal randomness infrastructure for Robinhood Chain. Designed so neither requester nor provider can unilaterally choose the output of a completed reveal.
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Chain](https://img.shields.io/badge/Chain-Robinhood%20Chain%204663-orange)](https://robinhoodchain.blockscout.com)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.24-363636)](https://foundry.paradigm.xyz/)
-[![Audit](https://img.shields.io/badge/Audit-Clean%20(0%20critical)-green)](docs/security-audit.md)
+[![Review](https://img.shields.io/badge/Review-Internal%20%2B%20Automated-yellow)](docs/security-audit.md)
 
 ---
 
@@ -34,9 +34,9 @@
 
 ## Overview
 
-Dice Protocol is a commit-reveal randomness oracle deployed on Robinhood Chain (chain ID 4663), an Arbitrum Nitro-based Layer 2. It delivers cryptographically secure, unbiased on-chain random numbers to any smart contract via a hash-chain commitment scheme.
+Dice Protocol is a commit-reveal randomness oracle deployed on Robinhood Chain (chain ID 4663), an Arbitrum Nitro-based Layer 2. It delivers verifiable onchain random numbers to any smart contract via a hash-chain commitment scheme.
 
-The protocol combines user-contributed randomness with provider-revealed values using Keccak256, producing manipulation-resistant results that are verifiable on-chain. Neither the provider nor the requester can bias the outcome — the result is random as long as either party is honest.
+The protocol combines user-contributed randomness with provider-revealed values using Keccak256, producing results that are verifiable onchain. Neither party can unilaterally choose the output of a completed reveal; a provider can still withhold service, after which eligible requests become refundable.
 
 Dice Protocol is the live RNG oracle on Robinhood Chain, operating under an exclusive provider model with a flat per-request fee of 0.000025 ETH. The on-chain contract is immutable (no proxy, no upgrade path), and the Tyche keeper — a Rust auto-reveal service — handles automated reveal submission 24/7.
 
@@ -45,15 +45,15 @@ Dice Protocol is the live RNG oracle on Robinhood Chain, operating under an excl
 ## Features
 
 - **Commit-reveal RNG** — Hash-chain commitment scheme with Keccak256. Provider pre-commits to a hash chain (live v10 currently registered with 500,000 values; longer chains supported); each request reveals the next.
-- **Unbiased** — Neither provider nor user can influence the outcome. Random as long as either party is honest.
+- **Two-party contribution** — Neither requester nor provider can unilaterally choose the output of a completed reveal.
 - **Verifiable on-chain** — Every reveal is independently checkable via `keccak256(reveal) == previousCommitment`.
-- **Low latency** — ~2–5 seconds per request (1 block confirmation on Robinhood Chain).
+- **Low latency** — ~1–3 seconds typical request-to-reveal time; not guaranteed.
 - **Flat fee model** — 0.000025 ETH per request. No hidden costs, no gas subsidies, no protocol fee splits.
 - **Immutable contract** — No proxy, no governance, no upgrade mechanism. Logic is permanent once deployed.
 - **Auto-reveal** — The Tyche keeper service monitors for `Requested` events and submits reveals automatically.
 - **Callback delivery** — Random numbers are delivered directly to consumer contracts via `entropyCallback()` in the same reveal transaction.
 - **TypeScript SDK** — Full-featured SDK for off-chain integration, event listening, and utility functions.
-- **Security audited** — Clean audit with zero critical or high-severity findings. See [docs/security-audit.md](docs/security-audit.md).
+- **Review status** — Internal and automated review completed. No independent third-party v10 audit report has been published. See [docs/security-audit.md](docs/security-audit.md).
 
 ---
 
@@ -210,8 +210,8 @@ Consumer contracts inherit `IEntropyConsumer` and implement `entropyCallback()`:
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import { IEntropyConsumer } from "@diceprotocol/sdk/IEntropyConsumer.sol";
-import { IEntropy } from "@diceprotocol/sdk/IEntropy.sol";
+import { IEntropyConsumer } from "@diceprotocol/sdk/solidity/IEntropyConsumer.sol";
+import { IEntropy } from "@diceprotocol/sdk/solidity/IEntropy.sol";
 
 contract MyGame is IEntropyConsumer {
     IEntropy public immutable dice;
@@ -273,7 +273,7 @@ cast send $CONTRACT_ADDRESS "rollDice()" \
   --value 0.000025ether
 ```
 
-The Tyche keeper detects the `Requested` event within ~20 blocks, computes the reveal, and submits `revealWithCallback()`. Your contract's `entropyCallback()` fires with the random number — typically within 2–5 seconds.
+The Tyche keeper detects the `Requested` event, computes the reveal, and submits `revealWithCallback()`. The callback typically arrives within ~1–3 seconds, but integrations must treat fulfillment as asynchronous.
 
 ### 3. TypeScript SDK Usage
 
@@ -346,9 +346,9 @@ console.log('Request status:', request);
 
 | Component   | Address                                                          |
 |-------------|------------------------------------------------------------------|
-| DiceEntropy | `0xd8a0680e7699526b57140ed4eafdcc7219dc0a0c`                    |
+| DiceEntropy | `0xE4F1cc334a3d5FFf8b588573921CA9e2FFE22E5c`                    |
 
-> **Note:** The testnet uses a free tier (0 ETH fee) and a shorter hash chain (1,000 values). See [docs/testnet-deployment.md](docs/testnet-deployment.md).
+> **Note:** The current testnet fee is exactly `0.000025 ETH`; its registered end sequence is `10000`. See [docs/testnet-deployment.md](docs/testnet-deployment.md).
 
 ---
 

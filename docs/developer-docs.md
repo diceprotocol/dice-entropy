@@ -2,7 +2,7 @@
 
 > **Contract:** [`0xd8a0680e7699526b57140ed4eafdcc7219dc0a0c`](https://robinhoodchain.blockscout.com/address/0xd8a0680e7699526b57140ed4eafdcc7219dc0a0c)
 > **Chain:** Robinhood Chain Mainnet (Chain ID: 4663)
-> **Fee:** 0.000025 ETH per request
+> **Fee:** exact 0.000025 ETH per request (`msg.value` must equal fee)
 > **Solidity:** ^0.8.24
 > **License:** Apache-2.0
 
@@ -27,14 +27,14 @@
 
 ## 1. Overview
 
-Dice Protocol is a trustless commit-reveal randomness oracle deployed on Robinhood Chain. It delivers provably fair, onchain verifiable random numbers through a two-party commit-reveal scheme — no single party can bias the outcome.
+Dice Protocol is a trustless commit-reveal randomness oracle deployed on Robinhood Chain. It delivers provably fair, on-chain verifiable random numbers through a two-party commit-reveal scheme — no single party can bias the outcome.
 
 **Key properties:**
 
 - **Unbiased** — The random number is derived from contributions by both the requester and the provider. Neither party alone controls or can predict the outcome.
 - **Immutable** — The contract is deployed without a proxy. The logic can never be changed.
 - **Callback-based** — When the random number is ready, the contract calls back into the requesting contract automatically. No polling or manual retrieval is needed.
-- **Single fee model** — A exact fee of 0.000025 ETH per request. All fees accrue to a protocol vault.
+- **Single fee model** — A flat fee of 0.000025 ETH per request. All fees accrue to a protocol vault.
 - **Exclusive provider** — Providers are registered by the protocol admin only. No permissionless registration.
 
 ### How It Works (Commit-Reveal)
@@ -53,14 +53,14 @@ Dice Protocol is a trustless commit-reveal randomness oracle deployed on Robinho
 └──────────┘                      └──────────┘                  └─────────────┘
 ```
 
-1. **User commits** — The requester generates a 32-byte random number (`userRandom`) and submits only its hash (`keccak256(userRandom)`) onchain via `requestV2()`. The raw value stays secret.
+1. **User contributes** — The requester generates a 32-byte CSPRNG value (`userRandom`) and submits it through `requestV2(address,bytes32,uint32)`. The contract stores a combined commitment; the emitted request event includes the user contribution so the provider can fulfill the request.
 2. **Provider reveals** — The provider holds a pre-committed hash chain. Upon seeing the `Requested` event, it submits the next chain value (`providerRevelation`) via `revealWithCallback()`. The contract verifies this value hashes back to the provider's published commitment.
-3. **Random number derived** — `randomNumber = keccak256(userRandom, providerContribution, blockHash)`. Since V2 always sets `useBlockhash = false`, the formula is effectively `keccak256(userRandom, providerContribution, 0)`.
+3. **Random number derived** — `randomNumber = keccak256(userRandom, providerContribution)`. Since V2 always sets `useBlockhash = false`, the formula is effectively `keccak256(userRandom, providerContribution)`.
 4. **Callback** — The contract calls `entropyCallback(sequence, provider, randomNumber)` on the requesting contract. If the callback reverts or runs out of gas, the reveal still succeeds and the failure is recorded in the `Revealed` event.
 
 ### Hash Chain
 
-The provider pre-commits a chain of values: `x₀ → x₁ → ... → xₙ`, where `xᵢ = keccak256(xᵢ₊₁)`. Only `x₀` (the commitment root) is published onchain at registration. Each request consumes one value from the chain. This means:
+The provider pre-commits a chain of values: `x₀ → x₁ → ... → xₙ`, where `xᵢ = keccak256(xᵢ₊₁)`. Only `x₀` (the commitment root) is published on-chain at registration. Each request consumes one value from the chain. This means:
 
 - **Past reveals are verifiable** — any revealed value hashes back to the commitment.
 - **Future reveals are unpredictable** — without knowing `xᵢ₊₁`, you cannot derive it from `xᵢ`.
@@ -85,7 +85,7 @@ When the chain runs low, the provider registers a new chain via `registerFor()`.
 ```
 @openzeppelin/=lib/openzeppelin-contracts/contracts/
 @excessively-safe-call/=lib/ExcessivelySafeCall/
-@dice-protocol/=src/
+@diceprotocol/sdk/=src/
 ```
 
 **Foundry config** (`contracts/foundry.toml`):
@@ -111,7 +111,7 @@ optimizer_runs = 200
 
 ```bash
 # Install the SDK
-npm install github:diceprotocol/dice-protocol-sdk
+npm install @diceprotocol/sdk
 
 # Or build from source
 cd sdk && npm install && npm run build
@@ -149,7 +149,7 @@ contracts/src/
 The main contract. Inherits `DiceState` and implements `IEntropy`. Handles:
 
 - Provider registration (admin-only via `registerFor()`)
-- Request handling (`requestV2()` with 4 overloads)
+- Request handling through `requestV2(address,bytes32,uint32)`; three legacy overloads are retained in the ABI but disabled
 - Reveal verification (`reveal()`, `revealWithCallback()`)
 - Callback dispatch to consumer contracts
 - Fee accounting (single flat fee, all to vault)
@@ -269,7 +269,7 @@ When a user calls `requestV2()`, they pass a `userRandomNumber` (32 bytes). The 
 userCommitment = keccak256(userRandomNumber)
 ```
 
-This hash is stored onchain. The raw `userRandomNumber` is kept secret by the user and revealed later during `revealWithCallback()`.
+The contract combines this hash with the provider commitment and stores the result. The `Requested` event emits `userRandomNumber`, allowing the keeper to include the same contribution during reveal verification.
 
 ### Provider Commitment
 
@@ -345,7 +345,7 @@ Deploys the contract with initial configuration. If `providerChainLength > 0`, t
 
 ### Request Functions
 
-All `requestV2` overloads are `payable` and return the assigned `sequenceNumber`.
+Only `requestV2(address,bytes32,uint32)` is active in v10. The three legacy overloads remain ABI-compatible but revert with `AssertionFailure()`.
 
 #### `requestV2()`
 
@@ -353,7 +353,7 @@ All `requestV2` overloads are `payable` and return the assigned `sequenceNumber`
 function requestV2() external payable returns (uint64 assignedSequenceNumber)
 ```
 
-Request randomness from the default provider. The user's random number is auto-generated by the contract's internal PRNG. Gas limit defaults to 0 (provider default).
+Disabled legacy overload; reverts with `AssertionFailure()`.
 
 #### `requestV2(uint32 gasLimit)`
 
@@ -361,7 +361,7 @@ Request randomness from the default provider. The user's random number is auto-g
 function requestV2(uint32 gasLimit) external payable returns (uint64 assignedSequenceNumber)
 ```
 
-Request from the default provider with a specified callback gas limit. User random is auto-generated.
+Disabled legacy overload; reverts with `AssertionFailure()`.
 
 #### `requestV2(address provider, uint32 gasLimit)`
 
@@ -369,7 +369,7 @@ Request from the default provider with a specified callback gas limit. User rand
 function requestV2(address provider, uint32 gasLimit) external payable returns (uint64 assignedSequenceNumber)
 ```
 
-Request from a specific provider with a specified gas limit. User random is auto-generated.
+Disabled legacy overload; reverts with `AssertionFailure()`.
 
 #### `requestV2(address provider, bytes32 userRandomNumber, uint32 gasLimit)`
 
@@ -378,12 +378,12 @@ function requestV2(address provider, bytes32 userRandomNumber, uint32 gasLimit)
     public payable returns (uint64 assignedSequenceNumber)
 ```
 
-**Primary request function.** All overloads delegate here. The user provides their own 32-byte random number for maximum entropy contribution. Pass `gasLimit = 0` to use the provider's default gas limit.
+**Active request function.** The user provides a 32-byte CSPRNG contribution. Pass `gasLimit = 0` to use the provider's default gas limit.
 
 | Parameter | Description |
 |-----------|-------------|
 | `provider` | Provider address (use `getDefaultProvider()` if unsure) |
-| `userRandomNumber` | 32-byte random value generated off-chain (keep secret until reveal) |
+| `userRandomNumber` | 32-byte value generated off-chain with a CSPRNG |
 | `gasLimit` | Gas limit for the callback. 0 = use provider's `defaultGasLimit` |
 
 **Emits:** `Requested`
@@ -453,7 +453,7 @@ function advanceProviderCommitment(
 ) public
 ```
 
-Advances the provider's onchain commitment to reduce `numHashes` for future requests. This is a gas optimization — without advancement, older requests require more hash iterations to verify. The caller provides a revelation value that, when hashed `numHashes` times, must equal the current commitment.
+Advances the provider's on-chain commitment to reduce `numHashes` for future requests. This is a gas optimization — without advancement, older requests require more hash iterations to verify. The caller provides a revelation value that, when hashed `numHashes` times, must equal the current commitment.
 
 **Reverts:** `UpdateTooOld`, `AssertionFailure`, `IncorrectRevelation`
 
@@ -579,7 +579,7 @@ function combineRandomValues(
 ) public pure returns (bytes32 combinedRandomness)
 ```
 
-Computes `keccak256(abi.encodePacked(userRandomness, providerRandomness, blockHash))`. In V2, `blockHash` is always `bytes32(0)`.
+Computes `keccak256(abi.encodePacked(userRandomness, providerRandomness))`. In V2, blockHash is not used (useBlockHash=false). The combination is two-party.
 
 ---
 
@@ -885,8 +885,8 @@ This is the standard pattern for smart contracts that need randomness. The consu
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import {IEntropyConsumer} from "@diceprotocol/sdk/IEntropyConsumer.sol";
-import {IEntropy} from "@diceprotocol/sdk/IEntropy.sol";
+import {IEntropyConsumer} from "@diceprotocol/sdk/solidity/IEntropyConsumer.sol";
+import {IEntropy} from "@diceprotocol/sdk/solidity/IEntropy.sol";
 
 contract MyGame is IEntropyConsumer {
     IEntropy public immutable dice;
@@ -908,15 +908,15 @@ contract MyGame is IEntropyConsumer {
         provider = _provider;
     }
 
-    /// @notice Request a random number. Caller must send ETH for the fee.
+    /// @notice Request a random number. Caller must send exact fee (no more, no less).
     function play(bytes32 userRandom) external payable returns (uint64 seq) {
-        // Get the required fee
+        // Exact fee required: underpay and overpay both revert with InsufficientFee()
         uint128 fee = dice.getFeeV2(provider, 100_000);
         require(msg.value == fee, "Exact fee required");
 
         // Store context for the callback
         seq = dice.requestV2{value: fee}(provider, userRandom, 100_000);
-        pending[seq] = PendingRequest(msg.sender, msg.value - fee);
+        pending[seq] = PendingRequest(msg.sender, 0);
         requesters[seq] = msg.sender;
     }
 
@@ -947,8 +947,8 @@ contract MyGame is IEntropyConsumer {
 ```
 
 **Key points:**
-- Generate `userRandom` off-chain using a secure random source (e.g., `crypto.getRandomValues()` in JS, `keccak256(block.prevrandao, msg.sender, nonce)` in Solidity).
-- Keep `userRandom` secret until the provider reveals — you'll need it to call `revealWithCallback()`.
+- Generate `userRandom` client-side or in a trusted backend using a CSPRNG, then pass it into the consumer contract.
+- Do not derive `userRandom` solely from public chain data. The request event exposes the contribution so the keeper can fulfill the request.
 - The gas limit you pass to `requestV2()` must cover your `entropyCallback()` logic.
 - If the callback fails, anyone can retry by calling `revealWithCallback()` again with the same parameters.
 
@@ -971,7 +971,8 @@ bytes32 randomNumber = dice.reveal(provider, seq, userRandom, providerRevelation
 The `@diceprotocol/sdk` package provides a TypeScript interface for off-chain integration.
 
 ```typescript
-import { DiceProtocol, ethers } from '@diceprotocol/sdk';
+import { DiceProtocol } from '@diceprotocol/sdk';
+import { JsonRpcProvider, Wallet, ethers } from 'ethers';
 
 // Initialize
 const dice = new DiceProtocol({
@@ -980,10 +981,10 @@ const dice = new DiceProtocol({
 });
 
 // Load wallet
-const wallet = new ethers.Wallet('YOUR_PRIVATE_KEY', dice.provider);
+const wallet = new Wallet('YOUR_PRIVATE_KEY', new JsonRpcProvider('https://rpc.mainnet.chain.robinhood.com'));
 
 // --- Request randomness ---
-// 1. Generate a random user contribution (keep this secret!)
+// 1. Generate a random user contribution with a CSPRNG
 const userRandom = DiceProtocol.generateUserRandom();
 
 // 2. Submit the request
@@ -1019,9 +1020,10 @@ If you're running a provider (keeper) service, you need to:
 1. **Generate a hash chain** off-chain and register it:
 ```typescript
 const seed = '0x' + crypto.randomBytes(32).toString('hex');
+// Example length — live v10 uses 500_000
 const chain = DiceProtocol.generateHashChain(seed, 500_000);
 
-// Register (admin only — uses registerFor onchain)
+// Register (admin only — uses registerFor on-chain)
 // commitment = chain.commitment (x₀)
 // revelations[0] = x₁ (first reveal), revelations[1] = x₂, ...
 ```
@@ -1047,7 +1049,7 @@ dice.onRequest(async (event) => {
 The `PRNG` contract helps derive multiple random values from a single `bytes32` random number:
 
 ```solidity
-import {PRNG} from "@diceprotocol/sdk/PRNG.sol";
+import {PRNG} from "@diceprotocol/sdk/solidity/PRNG.sol";
 
 contract DiceGame is IEntropyConsumer, PRNG {
     constructor(address _dice, address _provider)
@@ -1091,8 +1093,8 @@ Dice Protocol uses a **single flat fee model**:
 ### Checking the Fee
 
 ```solidity
-// Onchain
-uint128 fee = dice.getFeeV2(provider, 100_000);
+// On-chain
+uint128 fee = dice.getFee(provider);
 // or
 uint128 fee = dice.getFeeV2(provider, gasLimit);
 ```
@@ -1109,11 +1111,11 @@ All fee query functions return the same value regardless of provider or gas limi
 The fee must be sent as `msg.value` with the `requestV2()` call:
 
 ```solidity
-uint128 fee = dice.getFeeV2(provider, 100_000);
+uint128 fee = dice.getFee(provider);
 dice.requestV2{value: fee}(provider, userRandom, gasLimit);
 ```
 
-If `msg.value < fee`, the transaction reverts with `InsufficientFee()`. Excess `msg.value` is added to the accrued fees (no refund mechanism — send exactly the fee amount).
+If `msg.value != fee`, the transaction reverts with `InsufficientFee()`. Underpayment and overpayment both revert.
 
 ### Fee Withdrawal
 
@@ -1151,7 +1153,7 @@ A `requestV2()` call typically costs ~100k–150k gas:
 
 A `revealWithCallback()` call costs:
 - Base reveal: ~80k–120k gas
-- Callback execution: up to `gasLimit` (consumer-specified callback gas limit (example: 200k))
+- Callback execution: up to `gasLimit` (default 100k if provider has `defaultGasLimit` set)
 - Total: base + callback + event emission
 
 If the callback gas limit is set (non-zero `gasLimit10k`), the contract uses `ExcessivelySafeCall` to isolate callback failures. The callback runs with exactly `gasLimit10k × 10,000` gas. If the callback uses less, the remainder is not refunded to the caller.
@@ -1172,7 +1174,7 @@ Maximum gas limit: **655,350,000** (`uint16.max × 10,000`). Exceeding this reve
 
 Without `advanceProviderCommitment()`, each reveal must hash the provider's revelation `numHashes` times. As the provider's current commitment falls further behind the request sequence, `numHashes` grows, increasing gas cost per reveal.
 
-Call `advanceProviderCommitment()` periodically to move the onchain commitment forward, resetting `numHashes` for subsequent requests. This is especially important for high-throughput use cases.
+Call `advanceProviderCommitment()` periodically to move the on-chain commitment forward, resetting `numHashes` for subsequent requests. This is especially important for high-throughput use cases.
 
 ### Storage Slot Pre-fill
 
@@ -1275,8 +1277,8 @@ The test suite is in `contracts/test/`:
 pragma solidity ^0.8.0;
 
 import {Test} from "forge-std/Test.sol";
-import {DiceEntropy} from "@dice-protocol/DiceEntropy.sol";
-import {DiceErrors} from "@diceprotocol/sdk/DiceErrors.sol";
+import {DiceEntropy} from "@diceprotocol/sdk/DiceEntropy.sol";
+import {DiceErrors} from "@diceprotocol/sdk/solidity/DiceErrors.sol";
 
 contract MyConsumerTest is Test {
     DiceEntropy public dice;
@@ -1304,7 +1306,7 @@ contract MyConsumerTest is Test {
 
     function test_MyFlow() public {
         bytes32 userRandom = keccak256("my test random");
-        uint64 seq = dice.requestV2{value: 0}(provider, userRandom, 0);
+        uint64 seq = dice.requestV2{value: dice.getFeeV2(provider, 0)}(provider, userRandom, 0);
 
         vm.prank(provider);
         dice.revealWithCallback(provider, seq, userRandom, chain[seq]);
@@ -1343,7 +1345,7 @@ The contract is deployed and verified on Robinhood Chain Mainnet:
 | Admin | `0x4ACD2C88a239a924E47Fc4995114ca1Bb0CA3CaD` |
 | Default Provider | `0x8741b8a825644D9Ef18Faf2DAB5e9b47B900F2b6` |
 | Hash Chain Length | **500,000** values registered on live v10 (end sequence 500003); longer chains can be registered via `registerFor` |
-| Example Callback Gas Limit | 200,000 |
+| Default Gas Limit | 200,000 |
 
 ### Deploying a New Instance
 
@@ -1363,6 +1365,7 @@ import { DiceProtocol } from '@diceprotocol/sdk';
 import crypto from 'crypto';
 
 const seed = '0x' + crypto.randomBytes(32).toString('hex');
+// Example length — live v10 uses 500_000
 const chain = DiceProtocol.generateHashChain(seed, 500_000);
 
 console.log('Commitment (x₀):', chain.commitment);
@@ -1423,7 +1426,7 @@ cast call $CONTRACT_ADDRESS "getProviderInfoV2(address)(uint128,uint128,bytes32,
 #### 5. Start the Keeper Service
 
 The keeper service watches for `Requested` events and submits `revealWithCallback()` transactions. It needs:
-- Provider signing credentials for the funded hot wallet
+- The provider's private key (hot wallet, funded with ETH for gas)
 - The hash chain revelations (generated in step 2)
 - The contract address and RPC URL
 
@@ -1443,6 +1446,7 @@ The keeper monitors `Requested` events, looks up the corresponding hash chain va
 # Contract
 DICE_ENTROPY_ADDRESS=0xd8a0680e7699526b57140ed4eafdcc7219dc0a0c
 RH_CHAIN_RPC_MAINNET=https://rpc.mainnet.chain.robinhood.com
+# Robinhood public RPC is HTTP-only; no public WebSocket endpoint.
 RH_CHAIN_CHAIN_ID=4663
 
 # Provider / Keeper
@@ -1463,21 +1467,20 @@ DICE_VAULT_ADDRESS=0x918EAF0b2589710B0D85ef48C12a343E68263841
 | Chain | Chain ID | Contract Address | Status |
 |-------|----------|-----------------|--------|
 | Robinhood Chain Mainnet | 4663 | `0xd8a0680e7699526b57140ed4eafdcc7219dc0a0c` | ✅ Live |
-| Robinhood Chain Testnet | 46630 | `0xd8a0680e7699526b57140ed4eafdcc7219dc0a0c` | ✅ Live |
+| Robinhood Chain Testnet | 46630 | `0xE4F1cc334a3d5FFf8b588573921CA9e2FFE22E5c` | ✅ Live |
 
 ### Import Paths (Solidity)
 
 ```
-@dice-protocol/DiceEntropy.sol              — Main contract
-@dice-protocol/DiceState.sol                — Storage layout
-@diceprotocol/sdk/IEntropy.sol             — Full interface
-@diceprotocol/sdk/IEntropyV2.sol           — V2 interface
-@diceprotocol/sdk/IEntropyConsumer.sol     — Consumer base contract
-@diceprotocol/sdk/DiceStructsV2.sol        — Struct definitions
-@diceprotocol/sdk/DiceErrors.sol           — Error definitions
-@diceprotocol/sdk/DiceEventsV2.sol         — Event definitions
-@diceprotocol/sdk/DiceStatusConstants.sol  — Callback status constants
-@diceprotocol/sdk/PRNG.sol                 — PRNG utility
+DiceEntropy.sol and DiceState.sol are protocol source files and are not shipped in the consumer SDK package.
+@diceprotocol/sdk/solidity/IEntropy.sol             — Full interface
+@diceprotocol/sdk/solidity/IEntropyV2.sol           — V2 interface
+@diceprotocol/sdk/solidity/IEntropyConsumer.sol     — Consumer base contract
+@diceprotocol/sdk/solidity/DiceStructsV2.sol        — Struct definitions
+@diceprotocol/sdk/solidity/DiceErrors.sol           — Error definitions
+@diceprotocol/sdk/solidity/DiceEventsV2.sol         — Event definitions
+@diceprotocol/sdk/solidity/DiceStatusConstants.sol  — Callback status constants
+@diceprotocol/sdk/solidity/PRNG.sol                 — PRNG utility
 ```
 
 ### SDK Import (TypeScript)
@@ -1497,11 +1500,11 @@ import {
 ### Common Workflows Cheat Sheet
 
 ```
-Request randomness (onchain):
+Request randomness (on-chain):
   fee = dice.getFee(provider)
   seq = dice.requestV2{value: fee}(provider, userRandom, gasLimit)
 
-Receive randomness (onchain callback):
+Receive randomness (on-chain callback):
   function entropyCallback(uint64 seq, address provider, bytes32 randomNumber) internal override
 
 Read a request:
@@ -1515,6 +1518,29 @@ Withdraw fees (admin):
   dice.withdrawFees(amount)
 ```
 
+
 ## Refunds (v10)
 
-If a request is not revealed within about 60–90 seconds (`refundDelayBlocks = 6` L1 blocks on Robinhood/Arbitrum Nitro), the original requester can call `refundRequest(provider, sequenceNumber)` and reclaim the exact fee paid.
+If a request is not revealed within about 60–90 seconds, the original requester can reclaim the exact fee:
+
+```solidity
+// refundDelayBlocks = 6 on Robinhood Chain (L1 blocks ≈ 12s)
+dice.refundRequest(provider, sequenceNumber);
+```
+
+Notes:
+- Only the original requester can refund
+- Request must still be active (not revealed / settled)
+- Delay is L1-block based because Robinhood/Arbitrum Nitro uses L1 `block.number`
+- Live contract: `0xd8a0680e7699526b57140ed4eafdcc7219dc0a0c`
+- Live fee: exact `0.000025 ETH`
+
+
+### Failed-request economics
+
+A refund returns the exact request fee, but transaction gas is not refunded:
+
+- The requester pays gas for the original request and for `refundRequest`.
+- Dice retains no request fee and earns nothing from an unrevealed, refunded request.
+- If no reveal transaction was submitted, Dice has no direct reveal-transaction gas cost for that request.
+- If a reveal transaction was submitted but reverted, Dice bears that failed transaction's gas cost.

@@ -1,6 +1,6 @@
 # @diceprotocol/sdk
 
-TypeScript SDK for [Dice Protocol](https://diceprotocol.world) — trustless commit-reveal randomness oracle on Robinhood Chain.
+TypeScript SDK for [Dice Protocol](https://diceprotocol.world) — verifiable commit-reveal randomness oracle on Robinhood Chain.
 
 ## Live v10
 
@@ -23,14 +23,14 @@ npm install @diceprotocol/sdk
 
 ```typescript
 import { DiceProtocol } from '@diceprotocol/sdk';
-import { Wallet } from 'ethers';
+import { JsonRpcProvider, Wallet } from 'ethers';
 
 const dice = new DiceProtocol({
   rpcUrl: 'https://rpc.mainnet.chain.robinhood.com',
   contractAddress: '0xd8a0680e7699526b57140ed4eafdcc7219dc0a0c',
 });
 
-const signer = new Wallet(privateKey);
+const signer = new Wallet(privateKey, new JsonRpcProvider('https://rpc.mainnet.chain.robinhood.com'));
 const provider = '0x8741b8a825644D9Ef18Faf2DAB5e9b47B900F2b6';
 
 // Fee must be exact (underpay and overpay both revert)
@@ -58,8 +58,8 @@ See [`SKILL.md`](./SKILL.md) for the full agent integration guide (exact fee, re
 Solidity interfaces ship in [`solidity/`](./solidity):
 
 ```solidity
-import {IEntropyConsumer} from "@diceprotocol/sdk/IEntropyConsumer.sol";
-import {IEntropy} from "@diceprotocol/sdk/IEntropy.sol";
+import {IEntropyConsumer} from "@diceprotocol/sdk/solidity/IEntropyConsumer.sol";
+import {IEntropy} from "@diceprotocol/sdk/solidity/IEntropy.sol";
 ```
 
 ## License

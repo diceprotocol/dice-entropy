@@ -5,8 +5,10 @@ import re
 from pathlib import Path
 
 def md_to_pdf():
-    with open('/root/dice-protocol/docs/whitepaper.md') as f:
-        md = f.read()
+    source = Path('/root/dice-protocol-docs/whitepaper.md')
+    output = Path('/root/dice-entropy/artifacts/dice-protocol-whitepaper.pdf')
+    output.parent.mkdir(parents=True, exist_ok=True)
+    md = source.read_text()
 
     lines = md.split('\n')
     body_html = []
@@ -440,7 +442,7 @@ code.inline {{
     </div>
     <div class="cover-center">
         <div class="cover-title">Dice Protocol</div>
-        <div class="cover-subtitle">A commit-reveal randomness oracle for Robinhood Chain, delivering unbiased, verifiable onchain randomness through hash-chain commitments.</div>
+        <div class="cover-subtitle">Verifiable commit-reveal randomness infrastructure for Robinhood Chain, backed by hash-chain commitments and public onchain proofs.</div>
         <div class="cover-divider"></div>
         <div class="cover-meta">
             <div class="cover-meta-item">
@@ -457,7 +459,7 @@ code.inline {{
             </div>
             <div class="cover-meta-item">
                 <div class="cover-meta-label">Latency</div>
-                <div class="cover-meta-value">~3.5s</div>
+                <div class="cover-meta-value">~1–3s typical</div>
             </div>
         </div>
     </div>
@@ -484,15 +486,15 @@ code.inline {{
         page = browser.new_page()
         page.goto(f'file://{html_path}')
         page.pdf(
-            path='/tmp/dice-protocol-whitepaper.pdf',
+            path=str(output),
             format='A4',
             print_background=True,
             prefer_css_page_size=True,
         )
         browser.close()
 
-    size = Path('/tmp/dice-protocol-whitepaper.pdf').stat().st_size
-    print(f"PDF generated: {size:,} bytes")
+    size = output.stat().st_size
+    print(f"PDF generated: {output} ({size:,} bytes)")
 
 if __name__ == '__main__':
     md_to_pdf()

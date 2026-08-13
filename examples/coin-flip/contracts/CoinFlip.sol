@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import {IEntropyConsumer} from "@diceprotocol/sdk/IEntropyConsumer.sol";
-import {IEntropy} from "@diceprotocol/sdk/IEntropy.sol";
+import {IEntropyConsumer} from "@diceprotocol/sdk/solidity/IEntropyConsumer.sol";
+import {IEntropy} from "@diceprotocol/sdk/solidity/IEntropy.sol";
 
 /// @title CoinFlip — provably fair coin flip game powered by Dice Protocol
 /// @notice User commits a guess (heads/tails), requests randomness from Dice Protocol,

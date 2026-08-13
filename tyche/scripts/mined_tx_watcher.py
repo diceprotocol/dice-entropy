@@ -10,7 +10,7 @@ import os
 import websockets
 
 WS_URL = os.environ.get("MINED_TX_WS_URL", "")
-CONTRACT = "0x2ad7fc99e3d8a8da72802936dd5145bf672206b0"
+CONTRACT = "0xd8a0680e7699526b57140ed4eafdcc7219dc0a0c"
 REQUEST_V2_SELECTOR = "0xf77b45e1"
 REVEAL_DELAY = 0
 

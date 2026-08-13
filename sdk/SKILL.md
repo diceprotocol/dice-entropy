@@ -38,8 +38,8 @@ Best for: onchain games, lotteries, DeFi protocols, NFT mints.
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import { IEntropyConsumer } from "@diceprotocol/sdk/IEntropyConsumer.sol";
-import { IEntropy } from "@diceprotocol/sdk/IEntropy.sol";
+import { IEntropyConsumer } from "@diceprotocol/sdk/solidity/IEntropyConsumer.sol";
+import { IEntropy } from "@diceprotocol/sdk/solidity/IEntropy.sol";
 
 contract MyGame is IEntropyConsumer {
     IEntropy public immutable dice;
@@ -75,7 +75,7 @@ contract MyGame is IEntropyConsumer {
         address,
         bytes32 randomNumber
     ) internal override {
-        // Use randomNumber — it's unbiased and verifiable
+        // Use randomNumber; it is verifiable onchain
         sequence;
         randomNumber;
     }
@@ -97,7 +97,7 @@ npm install @diceprotocol/sdk ethers
 
 ```typescript
 import { DiceProtocol } from '@diceprotocol/sdk';
-import { Wallet } from 'ethers';
+import { JsonRpcProvider, Wallet } from 'ethers';
 
 const PROVIDER = '0x8741b8a825644D9Ef18Faf2DAB5e9b47B900F2b6';
 
@@ -106,7 +106,7 @@ const dice = new DiceProtocol({
   contractAddress: '0xd8a0680e7699526b57140ed4eafdcc7219dc0a0c',
 });
 
-const signer = new Wallet(process.env.PRIVATE_KEY!);
+const signer = new Wallet(process.env.PRIVATE_KEY!, new JsonRpcProvider('https://rpc.mainnet.chain.robinhood.com'));
 
 // 1. Fee must be exact (SDK request helper pays exact getFee result)
 const fee = await dice.getFee(PROVIDER, 200000); // -> 25000000000000n today

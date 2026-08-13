@@ -14,21 +14,21 @@ npm install @diceprotocol/sdk
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.0;
 
-import { IEntropyConsumer } from "@diceprotocol/sdk/IEntropyConsumer.sol";
-import { IEntropy } from "@diceprotocol/sdk/IEntropy.sol";
+import { IEntropyConsumer } from "@diceprotocol/sdk/solidity/IEntropyConsumer.sol";
+import { IEntropy } from "@diceprotocol/sdk/solidity/IEntropy.sol";
 
 contract MyGame is IEntropyConsumer {
     IEntropy public immutable dice;
     address public provider;
-    
+
     mapping(uint64 => bytes32) public results;
     mapping(uint64 => address) public requesters;
-    
+
     constructor(address _dice, address _provider) {
         dice = IEntropy(_dice);
         provider = _provider;
     }
-    
+
     function roll() external payable {
         // Generate user random contribution
         bytes32 userRandom = keccak256(abi.encodePacked(
@@ -37,17 +37,17 @@ contract MyGame is IEntropyConsumer {
             block.prevrandao,
             gasleft()
         ));
-        
+
         // Request randomness - must send exact fee
         uint64 seqNum = dice.requestV2{value: msg.value}(
             provider,
             userRandom,
-            200000  // callback gas limit
+            100000  // callback gas limit
         );
-        
+
         requesters[seqNum] = msg.sender;
     }
-    
+
     function entropyCallback(
         uint64 sequenceNumber,
         address,
@@ -56,7 +56,7 @@ contract MyGame is IEntropyConsumer {
         results[sequenceNumber] = randomNumber;
         // Use the random number in your game logic
     }
-    
+
     function getEntropy() internal view override returns (address) {
         return address(dice);
     }
@@ -91,7 +91,7 @@ const seqNum = await dice.requestRandom(
 );
 
 console.log('Request sequence:', seqNum);
-// Tyche auto-reveals within ~1–3 seconds typically
+// Tyche auto-reveals within ~20 seconds
 // Your contract's entropyCallback() fires automatically
 ```
 
@@ -112,7 +112,7 @@ console.log('Request sequence:', seqNum);
 | RPC URL | `https://rpc.mainnet.chain.robinhood.com` |
 | Block Explorer | `https://robinhoodchain.blockscout.com` |
 | Fee per Request | 0.000025 ETH (25,000,000,000,000 wei) |
-| Reveal Time | ~1–3 seconds typical |
+| Reveal Time | ~20 seconds (20 blocks) |
 
 ## How It Works
 
@@ -144,22 +144,21 @@ User Contract                DiceEntropy                Tyche Keeper
 |-----------|-----|-------|
 | `requestV2()` | ~125,000 | Paid by requester |
 | `revealWithCallback()` | ~200,000 | Paid by keeper |
-| Callback execution | Consumer-specified | Example integrations use 200,000 gas |
+| Callback execution | Configurable | Effective limit is the larger of the requested gas limit and the provider default, subject to `MAX_GAS_LIMIT` |
 
-Pass a callback gas limit that covers your callback logic. The examples use 200,000 gas. Keep callbacks small and deterministic.
+The live provider default is `200,000` gas. A request may specify a larger callback gas limit up to `MAX_GAS_LIMIT`; the contract rounds it up to the nearest 10,000 gas.
 
 ## Error Reference
 
 | Error | Cause |
 |-------|-------|
-| `InsufficientFee` | Sent ETH < provider fee |
+| `InsufficientFee` | Sent ETH does not equal the required fee |
 | `NoSuchProvider` | Provider not registered |
 | `NoSuchRequest` | Sequence number doesn't exist |
 | `IncorrectRevelation` | Provider reveal doesn't match commitment |
 | `OutOfRandomness` | Hash chain exhausted |
 | `MaxGasLimitExceeded` | Requested gas limit > MAX_GAS_LIMIT |
 | `Unauthorized` | Caller lacks permission |
-| `BlockhashUnavailable` | Block hash for request block not available |
 
 ## Comparison
 
@@ -167,11 +166,34 @@ Pass a callback gas limit that covers your callback logic. The examples use 200,
 |---------|---------------|-----------|
 | Deployment | Native to Robinhood Chain | External |
 | Fee model | Flat 0.000025 ETH | Variable |
-| Reveal time | ~1–3 seconds typical | Not guaranteed; depends on keeper/RPC |
+| Reveal time | ~20 seconds | 1-5 minutes |
 | Verifiability | On-chain Keccak256 | Varies |
 | Callback | Automatic | Manual polling |
 | Infrastructure | Self-hosted keeper | Third-party |
 
+
 ## Refunds (v10)
 
-If a request is not revealed within about 60–90 seconds (`refundDelayBlocks = 6` L1 blocks on Robinhood/Arbitrum Nitro), the original requester can call `refundRequest(provider, sequenceNumber)` and reclaim the exact fee paid.
+If a request is not revealed within about 60–90 seconds, the original requester can reclaim the exact fee:
+
+```solidity
+// refundDelayBlocks = 6 on Robinhood Chain (L1 blocks ≈ 12s)
+dice.refundRequest(provider, sequenceNumber);
+```
+
+Notes:
+- Only the original requester can refund
+- Request must still be active (not revealed / settled)
+- Delay is L1-block based because Robinhood/Arbitrum Nitro uses L1 `block.number`
+- Live contract: `0xd8a0680e7699526b57140ed4eafdcc7219dc0a0c`
+- Live fee: exact `0.000025 ETH`
+
+
+### Failed-request economics
+
+A refund returns the exact request fee, but transaction gas is not refunded:
+
+- The requester pays gas for the original request and for `refundRequest`.
+- Dice retains no request fee and earns nothing from an unrevealed, refunded request.
+- If no reveal transaction was submitted, Dice has no direct reveal-transaction gas cost for that request.
+- If a reveal transaction was submitted but reverted, Dice bears that failed transaction's gas cost.

@@ -1,6 +1,10 @@
-# Dice Protocol — Security Audit Report
+# Dice Protocol — Security Review Notes (Internal + Automated)
 
-## Audit Scope
+> **Important:** This document is **not** an independent third-party security audit.
+> It summarizes **internal review and automated analysis** (primarily Slither).
+> No external audit firm has published a v10 report. Do not market this file as a formal audit.
+
+## Review Scope
 
 - **Contract:** DiceEntropy.sol (src/DiceEntropy.sol)
 - **Supporting:** DiceState.sol, all SDK files in src/sdk/
@@ -9,7 +13,12 @@
 
 ## Summary
 
-**No critical or high-severity vulnerabilities found.**
+**Note:** This file covers the original Slither scan plus operational notes.
+Historical pre-v10 ops review (2026-07-18) recorded a **keeper credential exposure** (mitigated)
+and other high-severity operational items that were addressed before / during the v10 public surface.
+Those were **operational**, not open contract bugs in current v10 bytecode.
+The Slither findings below remain informational / low / design-inherent unless noted.
+
 
 All 25 detector results are informational, low-severity, or inherent to the
 commit-reveal RNG design pattern. The contract uses checks-effects-interactions
@@ -23,7 +32,7 @@ patterns, ExcessivelySafeCall for untrusted callbacks, and proper access control
 
 **Description:** Events are emitted after external calls in three functions.
 
-**Analysis:** 
+**Analysis:**
 - `withdraw()` and `withdrawAsFeeManager()` follow checks-effects-interactions: balance is decremented BEFORE the external call. A reentrant call would fail the `>= amount` check. **Safe.**
 - `revealWithCallback()` in the old callback flow (no gas limit) clears the request BEFORE making the external callback call. A reentrant call to reveal the same request would find it already cleared. **Safe.**
 - The new callback flow (with gas limit) uses ExcessivelySafeCall which prevents the callee from causing reversion. **Safe.**
@@ -42,7 +51,7 @@ patterns, ExcessivelySafeCall for untrusted callbacks, and proper access control
 
 **Location:** `requestHelper()` — `sequenceNumber == 0`, `defaultGasLimit == 0`
 
-**Analysis:** 
+**Analysis:**
 - `sequenceNumber == 0` checks if a provider has never been registered. Sequence numbers start at 1 after registration (incremented in `register()`). This is a valid "not registered" check. **Safe.**
 - `defaultGasLimit == 0` checks if the provider has opted into the new callback flow. This is a valid flag check. **Safe.**
 
@@ -107,15 +116,15 @@ patterns, ExcessivelySafeCall for untrusted callbacks, and proper access control
 ## Manual Audit
 
 ### Access Control
-- ✅ Admin functions (`proposeAdmin`, `acceptAdmin`, `setDefaultProvider`, `setFee`, `withdrawFees`) check `msg.sender == _state.admin`.
-- ✅ Provider-owned configuration functions (`setProviderUri`, `setMaxNumHashes`, `setDefaultGasLimit`) require a registered provider.
-- ✅ Disabled fee-manager/provider-fee paths (`setProviderFee`, `setProviderFeeAsFeeManager`, `setFeeManager`, `withdrawAsFeeManager`) revert by design in the v9 single-fee model.
+- ✅ Admin functions (`proposeAdmin`, `acceptAdmin`, `setDefaultProvider`, `setTreasuryFee`, `withdrawTreasuryFees`) all check `msg.sender == _state.admin`
+- ✅ Provider functions (`setProviderFee`, `setProviderUri`, `setFeeManager`, `setMaxNumHashes`, `setDefaultGasLimit`) check `sequenceNumber != 0` (registered provider)
+- ✅ Fee manager functions check `feeManager == msg.sender`
 - ✅ Two-step admin transfer (propose → accept) prevents accidental lockout
 
 ### Reentrancy
 - ✅ `withdraw()` — checks-effects-interactions (decrement before call)
 - ✅ `withdrawAsFeeManager()` — same pattern
-- ✅ `withdrawFees()` — same pattern
+- ✅ `withdrawTreasuryFees()` — same pattern
 - ✅ `revealWithCallback()` old flow — clears request before callback
 - ✅ `revealWithCallback()` new flow — ExcessivelySafeCall catches reverts + reentry
 - ✅ `reveal()` (no callback) — no external calls after state mutation
@@ -127,10 +136,11 @@ patterns, ExcessivelySafeCall for untrusted callbacks, and proper access control
 - ✅ Commitment advancement skips leaked sequence numbers (prevents prediction)
 
 ### Fee Handling
-- ✅ v9 uses a single flat protocol fee that accrues to the contract and is withdrawn by the admin to the vault.
-- ✅ `withdrawFees()` is only callable by admin.
-- ✅ Provider fee-manager withdrawal paths are disabled and revert by design.
-- ✅ Excess fees are not refunded; integrations should send the exact `getFee(provider)` value.
+- ✅ Treasury fees and provider fees tracked separately
+- ✅ `withdrawTreasuryFees()` only callable by admin
+- ✅ Provider `withdraw()` only withdraws their own accrued fees
+- ✅ Fee manager can only withdraw for their assigned provider
+- ✅ Excess fees not refunded (documented behavior)
 
 ### Request Storage
 - ✅ Two-level hash table (array + overflow mapping) prevents storage bloat
