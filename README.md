@@ -346,7 +346,7 @@ console.log('Request status:', request);
 
 | Component   | Address                                                          |
 |-------------|------------------------------------------------------------------|
-| DiceEntropy | `0xE4F1cc334a3d5FFf8b588573921CA9e2FFE22E5c`                    |
+| DiceEntropy | `0x43c8A7B1a85384cabf3D3Fd45a15C01F5b51A42D`                    |
 
 > **Note:** The current testnet fee is exactly `0.000025 ETH`; its registered end sequence is `10000`. See [docs/testnet-deployment.md](docs/testnet-deployment.md).
 

@@ -1467,7 +1467,7 @@ DICE_VAULT_ADDRESS=0x918EAF0b2589710B0D85ef48C12a343E68263841
 | Chain | Chain ID | Contract Address | Status |
 |-------|----------|-----------------|--------|
 | Robinhood Chain Mainnet | 4663 | `0xd8a0680e7699526b57140ed4eafdcc7219dc0a0c` | ✅ Live |
-| Robinhood Chain Testnet | 46630 | `0xE4F1cc334a3d5FFf8b588573921CA9e2FFE22E5c` | ✅ Live |
+| Robinhood Chain Testnet | 46630 | `0x43c8A7B1a85384cabf3D3Fd45a15C01F5b51A42D` | ✅ Live |
 
 ### Import Paths (Solidity)
 
