@@ -10,5 +10,8 @@
       "name": "v5.1.0",
       "rev": "69c8def5f222ff96f2b5beff05dfba996368aa79"
     }
+  },
+  "lib/ExcessivelySafeCall": {
+    "rev": "81cd99ce3e69117d665d7601c330ea03b97acce0"
   }
 }
