@@ -19,7 +19,7 @@ Onchain applications — games, lotteries, NFT mints, fair randomized distributi
 3. **Available**: The randomness is delivered reliably and within a predictable timeframe.
 4. **Economically viable**: The cost per request is low enough for widespread adoption.
 
-Robinhood Chain, as a new Arbitrum Nitro L2, launched without any randomness oracle infrastructure. No VRF service, no commit-reveal oracle, no onchain randomness primitive existed. Dice Protocol fills this gap.
+Robinhood Chain applications need dedicated randomness infrastructure because deterministic contract execution and chain-controlled values are not suitable private randomness sources. Dice Protocol provides a live commit-reveal option for this use case.
 
 ### 1.2 Solution
 
@@ -31,10 +31,11 @@ Dice Protocol implements a commit-reveal scheme based on hash chains:
 - The provider reveals the next hash in the chain, which the contract verifies by hashing it and checking against the committed root.
 - The final random number is `Keccak256(userRandomness || providerContribution)`, combining both parties' inputs for mutual unpredictability.
 
-This approach guarantees:
-- **Provider cannot precompute outcomes**: The provider doesn't know the user's random value at commitment time.
-- **User cannot bias outcomes**: The user's random value is committed before the provider reveals.
-- **Verifiable onchain**: Anyone can verify the reveal is correct by hashing it.
+This approach provides:
+- **Provider cannot precompute a completed result**: The provider does not know the user's random value at request time.
+- **User cannot choose the provider contribution**: The user's value is committed before the provider reveals.
+- **Liveness remains provider-dependent**: The provider can still withhold a reveal. Eligible requests become refundable after the configured delay.
+- **Verifiable onchain**: Anyone can verify a completed reveal by hashing it.
 - **Agent-friendly**: Immutable contract, deterministic fees, and automatic keeper reveals make Dice Protocol safe for AI agents, automation bots, and orchestration systems to integrate without human oversight. A complete [SKILL.md](https://github.com/diceprotocol/dice-protocol-sdk/blob/main/SKILL.md) is published for agent consumption.
 
 ---
@@ -102,11 +103,11 @@ Dice Protocol separates administrative, fee-recipient, and reveal-submission rol
 
 | Role | Address | Key Type | Purpose |
 |------|---------|----------|---------|
-| Admin | `0x4ACD...` | Cold | Contract admin (fee changes, withdrawals, provider management). Accepted admin role on-chain. |
+| Admin | `0x4ACD...` | Cold | Contract admin (fee changes, withdrawals, provider management). Accepted admin role onchain. |
 | Vault | `0x918E...` | Cold | Fee recipient (receives withdrawn fees) |
-| Keeper | `0x8741...` | Hot | Submits reveal transactions; cannot withdraw protocol fees or change contract parameters |
+| Keeper / provider | `0x8741...` | Hot | Submits reveals and may update provider-specific URI, maximum-hash, and callback-gas settings; cannot change protocol fee/admin or withdraw protocol fees |
 
-The keeper wallet only holds enough ETH for gas. It cannot withdraw fees or modify contract parameters. If compromised, the attacker can only reveal randomness early or fail to reveal — they cannot steal funds.
+The keeper wallet only holds enough ETH for gas. It cannot withdraw protocol fees or change admin-controlled protocol parameters. It can update provider-specific settings listed above. If compromised, an attacker could affect reveal timing/liveness and provider-specific configuration, but cannot withdraw protocol fees.
 
 ---
 
@@ -140,26 +141,19 @@ For a completed reveal, neither requester nor provider can unilaterally choose t
 
 ### 3.3 Commitment Metadata
 
-The provider stores bincode-serialized commitment metadata onchain:
+The provider stores non-secret rotation metadata onchain. The live metadata identifies the chain generation context and registered length, but it does not publish the raw hash-chain secret or future preimages.
 
-```
-CommitmentMetadata {
-    seed: [u8; 32],        // The original secret seed
-    chain_length: u64,     // Total chain length (live v10: 500000)
-}
-```
-
-This allows the Tyche keeper to reconstruct the hash chain from onchain data alone, without requiring off-chain coordination.
+The keeper reconstructs the chain using private provider configuration plus the public chain, provider, and contract context. Publishing the raw secret would make future provider contributions predictable, so it must remain offchain and private.
 
 ### 3.4 Security Properties
 
 | Property | Guarantee |
 |----------|-----------|
 | Unpredictability | Provider cannot predict user's random value at commitment time |
-| Non-biasability | User cannot influence provider's contribution |
+| Completed-result control | Neither party unilaterally chooses a completed result. The provider can still withhold a reveal; refunds mitigate fee loss. |
 | Verifiability | Each reveal is verifiable onchain via Keccak256 |
 | Tamper resistance | Immutable contract, no upgrade path |
-| Gas bounded | Callback gas capped at `defaultGasLimit` (200,000) |
+| Gas bounded | Effective callback gas is `max(requested, provider.defaultGasLimit)`, rounded up to 10,000, then bounded by `MAX_GAS_LIMIT`. If `defaultGasLimit` is 0, stored callback gas is 0 and the gas-limited path does not run. Live default is 200,000. |
 | Chain exhaustion protection | `OutOfRandomness` error when chain depleted |
 
 ### 3.5 Zero Reveal Delay
@@ -172,7 +166,7 @@ Dice Protocol does not incorporate block data into its randomness. The output is
 
 This is specific to the L2 context. Robinhood Chain runs on a single centralized sequencer. Block production is deterministic and ordered — there is no competitive mining process that would make block hashes independently unpredictable. Treating an L2 block hash as an entropy source would import a value controlled by one operator, which is the opposite of the decentralization that makes block hashes useful on L1.
 
-The tradeoff is clear: zero delay gives ~1–3 second typical request-to-callback latency, and the two-party commit-reveal design already guarantees that neither the user nor the provider can bias the result. The security model does not depend on block timing or sequencer behavior — it depends on two independent parties each contributing unpredictability that the other cannot control.
+The tradeoff is clear: zero delay gives ~1–3 second typical request-to-reveal latency. For a completed reveal, neither party unilaterally chooses the output under the stated model. The provider can still withhold a reveal and affect liveness; the refund path mitigates fee loss but does not produce a random result.
 
 ---
 
@@ -186,10 +180,7 @@ Dice Protocol uses a **single flat fee** model:
 - **Fee destination**: 100% to the contract's accrued fee pool
 - **Withdrawal**: Admin calls `withdrawFees()`, sending the full balance to the vault address
 
-There is no protocol fee, no provider fee split, and no gas subsidy. The fee is set to cover:
-- Keeper gas costs for reveal transactions (~0.000006 ETH at current gas prices)
-- Infrastructure costs (compute, monitoring)
-- Profit margin (~80%)
+There is no provider-specific fee split. The exact request fee accrues to the protocol fee pool and is withdrawable to the vault. Reveal gas and operating costs vary with network conditions and consumer callback behavior, so no fixed per-request margin is claimed.
 
 ### 4.2 Gas Economics
 
@@ -219,7 +210,7 @@ Request randomness from a specific provider. The caller must send ETH equal to t
 
 - `provider`: The provider address (must be registered)
 - `userRandomNumber`: User's random contribution (32 bytes)
-- `gasLimit`: Gas limit for the callback (capped at `MAX_GAS_LIMIT`)
+- `gasLimit`: Requested callback gas. Effective limit is `max(requested, provider.defaultGasLimit)`, rounded up to 10,000 units, and must not exceed `MAX_GAS_LIMIT` (655,350,000). A 0 request with live default 200,000 becomes 200,000. If `defaultGasLimit` is 0, stored callback gas is 0 regardless of the request.
 - Returns: Assigned sequence number
 
 #### `revealWithCallback(address provider, uint64 sequenceNumber, bytes32 userContribution, bytes32 providerContribution)`
@@ -229,7 +220,7 @@ Called by the keeper to reveal the provider's contribution and trigger the consu
 - Verifies `Keccak256(providerContribution) == currentCommitment`
 - Computes `randomNumber = Keccak256(userContribution ‖ providerContribution)`
 - Calls `entropyCallback(sequenceNumber, provider, randomNumber)` on the requester
-- Uses `excessivelySafeCall` with `min(gasLimit, defaultGasLimit)` gas
+- Uses `excessivelySafeCall` with the stored effective limit: `max(requested, provider.defaultGasLimit)`, rounded up to 10,000. If stored callback gas is 0, the callback uses remaining gas.
 
 #### `getFee(address provider) → uint128`
 
@@ -275,7 +266,7 @@ interface IEntropyConsumer {
 
 Tyche operates as a continuous block-watching service:
 
-1. **Initialization**: Reads provider info from the contract, deserializes commitment metadata, reconstructs the hash chain in memory.
+1. **Initialization**: Reads public provider info from the contract and reconstructs the hash chain in memory from private provider configuration plus public chain, provider, and contract context. Onchain metadata is not the raw hash-chain secret.
 2. **Block watching**: HTTP polling at 1-second intervals using `eth_blockNumber` + `eth_getLogs`. The keeper fetches the latest block and queries event logs in 9-block batches. No WebSocket dependency — pure HTTP for maximum reliability across RPC providers.
 3. **Reveal computation**: For each request, computes the reveal value by indexing into the precomputed hash chain at the sequence number offset.
 4. **Transaction submission**: Sends `revealWithCallback` transactions from the keeper wallet with appropriate gas.
@@ -301,7 +292,7 @@ Operational deployment details are private. Public reliability and current healt
 |--------|------------|
 | Provider withholds reveal | No onchain penalty in v1; relies on service uptime. Future: slashing. |
 | User front-runs reveal | User commits random value before provider reveals; provider cannot see it in advance. |
-| Callback gas griefing | `defaultGasLimit` caps callback gas at 200,000. Uses `excessivelySafeCall`. |
+| Callback gas behavior | Effective callback gas is `max(requested, provider.defaultGasLimit)`, rounded up to 10,000, rejected above `MAX_GAS_LIMIT`. Live default 200,000: a 0 request becomes 200,000; an explicit 500,000 request is honored. If `defaultGasLimit` is 0, stored gas is 0. Uses `excessivelySafeCall`. |
 | Chain exhaustion | `OutOfRandomness` revert when sequence exceeds chain length. |
 | Private key compromise | Three-wallet separation limits blast radius. Keeper cannot steal fees. |
 | Contract reentrancy | `excessivelySafeCall` pattern prevents callback reentrancy into reveal logic. |
@@ -387,7 +378,7 @@ contract MyGame is IEntropyConsumer {
 - ✅ DiceEntropy contract deployed on Robinhood Chain mainnet
 - ✅ Tyche keeper operational with auto-reveal (~1–3s typical latency)
 - ✅ TypeScript SDK published to npm (`@diceprotocol/sdk`)
-- ✅ Fee set to 0.000025 ETH (live on-chain)
+- ✅ Fee set to 0.000025 ETH (live onchain)
 - ✅ Admin role accepted (0x4ACD...)
 - ✅ Automated security analysis (Slither + Aderyn) — 0 critical/0 high
 - ✅ Contract source published and verified on Blockscout
@@ -434,7 +425,7 @@ contract MyGame is IEntropyConsumer {
 |-----------|-------|
 | Algorithm | Keccak256 |
 | Registered span | 500,000 values (sequences 3 through 500002; end sequence 500003) |
-| Commitment | `0x36b1ca65059e5ebfc4becfbda069308520384ca6a415c2930e1baf28e9e08a00` |
+| Original commitment | `0xb533ab9c0451c5b58c42ca93a2ad5fceeba8b07fb4ea95089ff6474def4762b3` (registered at sequence 3; query `getProviderInfoV2` for the advancing current commitment) |
 | Sample interval | 1 (every hash stored) |
 
 ### D. References

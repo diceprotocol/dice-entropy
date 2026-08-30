@@ -27,11 +27,11 @@
 
 ## 1. Overview
 
-Dice Protocol is a trustless commit-reveal randomness oracle deployed on Robinhood Chain. It delivers provably fair, on-chain verifiable random numbers through a two-party commit-reveal scheme — no single party can bias the outcome.
+Dice Protocol is a commit-reveal randomness oracle deployed on Robinhood Chain. It delivers onchain-verifiable random numbers through a two-party commit-reveal scheme. Neither party unilaterally chooses a completed result under the stated model. The provider can still withhold a reveal, which affects liveness; eligible requests become refundable after the configured delay.
 
 **Key properties:**
 
-- **Unbiased** — The random number is derived from contributions by both the requester and the provider. Neither party alone controls or can predict the outcome.
+- **Two-party result** - The random number is derived from contributions by both the requester and the provider. Neither party unilaterally chooses a completed result. The provider can still withhold a reveal.
 - **Immutable** — The contract is deployed without a proxy. The logic can never be changed.
 - **Callback-based** — When the random number is ready, the contract calls back into the requesting contract automatically. No polling or manual retrieval is needed.
 - **Single fee model** — A flat fee of 0.000025 ETH per request. All fees accrue to a protocol vault.
@@ -1153,7 +1153,7 @@ A `requestV2()` call typically costs ~100k–150k gas:
 
 A `revealWithCallback()` call costs:
 - Base reveal: ~80k–120k gas
-- Callback execution: up to `gasLimit` (default 100k if provider has `defaultGasLimit` set)
+- Callback execution: the larger of requested `gasLimit` and the live provider default of 200,000, rounded up to 10,000 gas
 - Total: base + callback + event emission
 
 If the callback gas limit is set (non-zero `gasLimit10k`), the contract uses `ExcessivelySafeCall` to isolate callback failures. The callback runs with exactly `gasLimit10k × 10,000` gas. If the callback uses less, the remainder is not refunded to the caller.

@@ -90,7 +90,7 @@ Consumer Contract            DiceEntropy (on-chain)           Tyche Keeper (off-
      │                              │                                │
 ```
 
-**Security guarantee:** The provider cannot predict the user's random value at commitment time. The user cannot bias the provider's value — it's locked in the hash chain. The result is unpredictable to both parties.
+**Security model:** The provider cannot predict the user's random value at request time. The user cannot choose the provider contribution, which is locked in the hash chain. For a completed reveal, neither party unilaterally chooses the output. The provider can still withhold a reveal; eligible requests become refundable after the configured delay.
 
 ---
 
@@ -482,7 +482,7 @@ const dice = new DiceProtocol({
 
 Tyche is the Rust-based auto-reveal service that powers Dice Protocol. It runs as a systemd service and handles the full reveal lifecycle:
 
-1. **Initialization** — Reads provider info from the DiceEntropy contract, deserializes commitment metadata, reconstructs the hash chain in memory.
+1. **Initialization** — Reads public provider info from the DiceEntropy contract and reconstructs the hash chain in memory from private provider configuration plus public chain context. Onchain metadata is not the raw hash-chain secret.
 2. **Block watching** — Polls for new blocks, filtering for `Requested` events.
 3. **Reveal computation** — Indexes into the precomputed hash chain at the correct sequence number.
 4. **Transaction submission** — Sends `revealWithCallback` transactions from the keeper wallet.
