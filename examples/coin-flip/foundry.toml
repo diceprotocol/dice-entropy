@@ -1,11 +1,22 @@
 [profile.default]
 src = "contracts"
 out = "out"
-libs = ["/root/dice-protocol/contracts/lib"]
-remappings = [
-    "@openzeppelin/=/root/dice-protocol/contracts/lib/openzeppelin-contracts/contracts/",
-    "@excessively-safe-call/=/root/dice-protocol/contracts/lib/ExcessivelySafeCall/",
-    "@dice-protocol/=/root/dice-protocol/contracts/src/",
-]
+libs = ["lib", "../../contracts/lib"]
+test = "test"
 solc_version = "0.8.24"
-allow_paths = ["/root/dice-protocol/contracts"]
+optimizer = true
+optimizer_runs = 200
+via_ir = true
+ffi = false
+allow_paths = ["../../contracts", "../../sdk"]
+remappings = [
+    "forge-std/=../../contracts/lib/forge-std/src/",
+    "@diceprotocol/sdk/=../../sdk/",
+    "@dice-protocol/=../../contracts/src/",
+    "@openzeppelin/=../../contracts/lib/openzeppelin-contracts/contracts/",
+    "@excessively-safe-call/=../../contracts/lib/ExcessivelySafeCall/",
+]
+
+[fmt]
+line_length = 100
+tab_width = 4

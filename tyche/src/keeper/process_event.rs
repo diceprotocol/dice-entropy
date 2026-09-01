@@ -11,9 +11,33 @@ use {
     },
     anyhow::{anyhow, Result},
     ethers::{abi::AbiDecode, contract::ContractError},
-    std::time::Duration,
     tracing,
 };
+
+fn map_reveal_submit_error<T>(
+    _num_retries: u64,
+    error: backoff::Error<SubmitTxError<T>>,
+) -> backoff::Error<SubmitTxError<T>>
+where
+    T: ethers::middleware::Middleware + crate::eth_utils::nonce_manager::NonceManaged + 'static,
+{
+    if let backoff::Error::Transient {
+        err: SubmitTxError::GasUsageEstimateError(_, ContractError::Revert(revert)),
+        ..
+    } = &error
+    {
+        if matches!(
+            DiceRandomErrorsErrors::decode(revert),
+            Ok(DiceRandomErrorsErrors::NoSuchRequest(_))
+        ) {
+            return match error {
+                backoff::Error::Transient { err, .. } => backoff::Error::Permanent(err),
+                other => other,
+            };
+        }
+    }
+    error
+}
 
 /// Process an event with backoff. It will retry the reveal on failure for 5 minutes.
 #[tracing::instrument(name = "process_event_with_backoff", skip_all, fields(
@@ -145,50 +169,19 @@ pub async fn process_event_with_backoff(
         event.user_random_number,
         provider_revelation,
     );
-    let error_mapper = |num_retries, e| {
-        if let backoff::Error::Transient {
-            err: SubmitTxError::GasUsageEstimateError(tx, ContractError::Revert(revert)),
-            ..
-        } = &e
-        {
-            if let Ok(DiceRandomErrorsErrors::NoSuchRequest(_)) =
-                DiceRandomErrorsErrors::decode(revert)
-            {
-                let err = SubmitTxError::GasUsageEstimateError(
-                    tx.clone(),
-                    ContractError::Revert(revert.clone()),
-                );
-                // Slow down the retries if the request is not found.
-                // This probably means that the request is already fulfilled via another process.
-                // After 5 retries, we return the error permanently.
-                if num_retries >= 5 {
-                    return backoff::Error::Permanent(err);
-                }
-                let retry_after_seconds = match num_retries {
-                    0 => 5,
-                    1 => 10,
-                    _ => 60,
-                };
-                return backoff::Error::Transient {
-                    err,
-                    retry_after: Some(Duration::from_secs(retry_after_seconds)),
-                };
-            }
-        }
-        e
+    // Serialize reveal submissions to protect the nonce manager. Do not add a
+    // custom retry loop for already-settled requests: stale events must fail
+    // immediately instead of occupying the reveal lane for several minutes.
+    let success = {
+        let _guard = reveal_lock.lock().await;
+        submit_tx_with_backoff(
+            contract.client(),
+            contract_call,
+            escalation_policy,
+            Some(map_reveal_submit_error),
+        )
+        .await
     };
-
-    // Serialize reveal submissions — prevents nonce collisions when
-    // multiple requests arrive in the same block.
-    let _guard = reveal_lock.lock().await;
-
-    let success = submit_tx_with_backoff(
-        contract.client(),
-        contract_call,
-        escalation_policy,
-        Some(error_mapper),
-    )
-    .await;
 
     metrics
         .requests_processed
