@@ -301,7 +301,7 @@ forge test
 
 **Verify:**
 ```bash
-cd /root/dice-protocol/sdk
+cd sdk
 npm run build
 npm test
 ```
@@ -324,7 +324,7 @@ npm test
 
 **Verify:**
 ```bash
-cd /root/dice-protocol/tyche
+cd tyche
 cargo test
 cargo build --release
 ```
