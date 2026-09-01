@@ -65,7 +65,7 @@ tyche/src/
 
 ### Operation Flow
 
-1. **Startup**: Tyche reads config → connects to RPC → fetches provider info from contract → deserializes commitment metadata → reconstructs hash chain in memory
+1. **Startup**: Tyche reads private config → connects to RPC → fetches public provider info from the contract → reconstructs the hash chain in memory from the private secret plus public chain context. Onchain metadata is not the raw hash-chain secret.
 2. **Backlog processing**: Scans from last-processed block to current block
 3. **Live mode**: Polls for new blocks in 100-block batches
 4. **Event handling**: For each `Requested` event, computes the reveal value and submits a `revealWithCallback` transaction

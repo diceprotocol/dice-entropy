@@ -2,10 +2,10 @@
 
 ## Status
 
-- **Stage:** DiceEntropy v10 is live on Robinhood Chain mainnet. Reproducible replacement testnet deployment is live and Blockscout-verified.
+- **Stage:** DiceEntropy v10 is live on Robinhood Chain mainnet. Reproducible replacement testnet deployment is live and Blockscout-verified. Keeper stale-request handling is live. `@diceprotocol/sdk@1.0.3` is published.
 - **Environment:** This public GitHub repository contains the immutable v10 contract source, SDK snapshot, reference keeper source, examples, and public documentation. Live operations use separate private configuration.
 - **Goal:** Keep every active public file aligned to deployed v10 and avoid exposing operational details.
-- **Next step:** Daily public consistency watchdog is live. npm `1.0.3` remains unpublished pending explicit package-release approval.
+- **Next step:** Immutable v10 refund-liability reservation remains a next-contract item. No third-party audit firm report has been published.
 
 ## Architecture
 
@@ -16,7 +16,7 @@
 - Refund delay: `6` L1 blocks, approximately 60 to 90 seconds.
 - Live registered hash-chain span: 500,000 values (`3` through `500003`).
 - Testnet chain ID: `46630`.
-- Testnet DiceEntropy: `0x43c8A7B1a85384cabf3D3Fd45a15C01F5b51A42D`.
+- Testnet DiceEntropy: `0x43c8A7B1a85384cabf3D3Fd45a15C01F5b51A42D` (replacement; historical `0xE4F1…2E5c` is deprecated).
 - Testnet provider: same provider address as mainnet.
 - Exact testnet fee: `0.000025 ETH`.
 - Package: `@diceprotocol/sdk`.
