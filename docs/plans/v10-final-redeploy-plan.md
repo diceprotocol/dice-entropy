@@ -272,7 +272,7 @@ Remove or rename broken SDK helpers:
 
 **Commands:**
 ```bash
-cd /root/dice-protocol/contracts
+cd contracts
 forge fmt --check
 forge build
 forge test
@@ -406,9 +406,9 @@ cargo build --release
 
 **Commands:**
 ```bash
-cd /root/dice-protocol/contracts && forge build && forge test
-cd /root/dice-protocol/sdk && npm run build && npm test
-cd /root/dice-protocol/tyche && cargo test
+cd contracts && forge build && forge test
+cd sdk && npm run build && npm test
+cd tyche && cargo test
 ```
 
 **Also verify:**
