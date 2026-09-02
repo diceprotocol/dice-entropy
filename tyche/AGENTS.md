@@ -1,6 +1,6 @@
 # Tyche Keeper — Rust Auto-Reveal Service
 
-Part of Dice Protocol. See `/root/dice-protocol/AGENTS.md` for protocol-level context (contracts, chain config, addresses, deploy).
+Part of Dice Protocol. See the repository-root `AGENTS.md` for protocol-level context (contracts, chain config, addresses, deploy).
 
 ## Build & Test Commands
 

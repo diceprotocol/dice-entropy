@@ -103,7 +103,7 @@ Remove or rename broken SDK helpers:
 
 **Steps:**
 1. Inspect `git status --short`.
-2. Ensure the existing backup zip exists under `/root/dice-protocol/backups/`.
+2. Ensure the existing backup zip exists under the operator backup directory.
 3. Create branch `feat/dice-v10-final` from current working tree or after committing current doc cleanup.
 4. Do not push.
 
@@ -386,7 +386,7 @@ cargo build --release
 - `docs/*.md`
 - `sdk/SKILL.md`
 - `sdk/README.md`
-- website pages under `/root/dice-protocol-web/app`
+- website pages under the public site `app/` tree
 - `AGENTS.md`
 - package metadata
 

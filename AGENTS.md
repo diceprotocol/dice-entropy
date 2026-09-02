@@ -25,11 +25,11 @@
 ## Build & Deploy
 
 ```bash
-cd /root/dice-entropy/contracts
-/root/.foundry/bin/forge build
-/root/.foundry/bin/forge test
+cd contracts
+forge build
+forge test
 
-cd /root/dice-entropy/sdk
+cd ../sdk
 npm ci
 npm run build
 npm test

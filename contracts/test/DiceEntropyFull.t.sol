@@ -3,10 +3,10 @@ pragma solidity ^0.8.0;
 
 import {Test} from "forge-std/Test.sol";
 import {DiceEntropy} from "@dice-protocol/DiceEntropy.sol";
-import {DiceStructsV2} from "@dice-protocol/sdk/DiceStructsV2.sol";
-import {DiceErrors} from "@dice-protocol/sdk/DiceErrors.sol";
-import {DiceStatusConstants} from "@dice-protocol/sdk/DiceStatusConstants.sol";
-import {IEntropyConsumer} from "@dice-protocol/sdk/IEntropyConsumer.sol";
+import {DiceStructsV2} from "@diceprotocol/sdk/DiceStructsV2.sol";
+import {DiceErrors} from "@diceprotocol/sdk/DiceErrors.sol";
+import {DiceStatusConstants} from "@diceprotocol/sdk/DiceStatusConstants.sol";
+import {IEntropyConsumer} from "@diceprotocol/sdk/IEntropyConsumer.sol";
 
 contract CallbackRecorder {
     DiceEntropy public dice;

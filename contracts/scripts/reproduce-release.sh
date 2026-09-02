@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-export PATH="/root/.foundry/bin:$PATH"
 cd "$ROOT"
 bash scripts/install-pinned-deps.sh
 forge clean
