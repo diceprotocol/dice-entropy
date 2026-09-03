@@ -38,7 +38,7 @@ Dice Protocol is a commit-reveal randomness oracle deployed on Robinhood Chain (
 
 The protocol combines user-contributed randomness with provider-revealed values using Keccak256, producing results that are verifiable onchain. Neither party can unilaterally choose the output of a completed reveal; a provider can still withhold service, after which eligible requests become refundable.
 
-Dice Protocol is the live RNG oracle on Robinhood Chain, operating under an exclusive provider model with a flat per-request fee of 0.000025 ETH. The on-chain contract is immutable (no proxy, no upgrade path), and the Tyche keeper — a Rust auto-reveal service — handles automated reveal submission 24/7.
+Dice Protocol is a live RNG oracle on Robinhood Chain with a flat per-request fee of 0.000025 ETH. The onchain contract is immutable (no proxy, no upgrade path). The Tyche keeper, a Rust auto-reveal service, submits reveals automatically.
 
 ---
 
@@ -46,9 +46,10 @@ Dice Protocol is the live RNG oracle on Robinhood Chain, operating under an excl
 
 - **Commit-reveal RNG** — Hash-chain commitment scheme with Keccak256. Provider pre-commits to a hash chain (live v10 currently registered with 500,000 values; longer chains supported); each request reveals the next.
 - **Two-party contribution** — Neither requester nor provider can unilaterally choose the output of a completed reveal.
-- **Verifiable on-chain** — Every reveal is independently checkable via `keccak256(reveal) == previousCommitment`.
-- **Low latency** — ~1–3 seconds typical request-to-reveal time; not guaranteed.
-- **Flat fee model** — 0.000025 ETH per request. No hidden costs, no gas subsidies, no protocol fee splits.
+- **Verifiable onchain** - Every reveal is independently checkable via `keccak256(reveal) == previousCommitment`.
+- **Fast reveal** - Built for sub-second keeper fulfillment. Typical observed request-to-reveal is about 1-3 seconds; not guaranteed.
+- **Cheap, predictable fee** - Exact 0.000025 ETH per request. No hidden costs, no gas subsidies, no protocol fee splits.
+- **Agent-friendly** - x402 `$0.05` USDG, `@diceprotocol/sdk`, [SKILL.md](https://diceprotocol.world/skills/dice-integration/SKILL.md).
 - **Immutable contract** — No proxy, no governance, no upgrade mechanism. Logic is permanent once deployed.
 - **Auto-reveal** — The Tyche keeper service monitors for `Requested` events and submits reveals automatically.
 - **Callback delivery** — Random numbers are delivered directly to consumer contracts via `entropyCallback()` in the same reveal transaction.
