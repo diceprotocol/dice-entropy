@@ -19,6 +19,11 @@ async function main() {
   const protocolFee = await dice.getProtocolFee();
   console.log('Protocol Fee:', protocolFee.toString(), 'wei');
 
+  // Read the fee for a callback gas limit, as requestRandom() does before every request
+  const feeWithGas = await dice.getFee(defaultProvider, 200000);
+  console.log('Fee for 200,000 callback gas:', feeWithGas.toString(), 'wei');
+  if (feeWithGas !== protocolFee) throw new Error(`Unexpected fee for a gas limit: ${feeWithGas}`);
+
   // Read provider info
   const info = await dice.getProviderInfo(defaultProvider);
   console.log('Provider Info:');
@@ -48,6 +53,15 @@ async function main() {
   if (info.endSequenceNumber <= info.sequenceNumber) throw new Error('Provider hash chain exhausted');
   if (chain.revelations.length !== 9) throw new Error(`Expected 9 reveal values, got ${chain.revelations.length}`);
   if (chain.revelations[8] !== '0x' + 'ab'.repeat(32)) throw new Error('Hash-chain final reveal should equal seed');
+
+  // A revelation is a bytes32: one that starts with a zero byte is still hashed as 32 bytes, as the contract does.
+  // About one value in 256 does; here the seed (the last reveal) is one of them.
+  const zeroLed = DiceProtocol.generateHashChain('0x00' + 'ab'.repeat(31), 4);
+  zeroLed.revelations.forEach((reveal: string, i: number) => {
+    if (DiceProtocol.constructProviderCommitment(i + 1, reveal) !== zeroLed.commitment) {
+      throw new Error(`Reveal ${i + 1} (${reveal}) does not hash back to the commitment`);
+    }
+  });
 
   console.log('\n✅ SDK smoke test passed');
 }

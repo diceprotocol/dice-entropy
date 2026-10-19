@@ -115,7 +115,8 @@ export class DiceProtocol {
   async getFee(provider?: string, gasLimit?: number): Promise<bigint> {
     const p = provider || (await this.getDefaultProvider());
     if (gasLimit !== undefined) {
-      return await this.contract.getFeeV2(p, gasLimit);
+      // getFeeV2 is overloaded; ethers cannot pick between (address,uint32) and (uint32) from the arguments alone
+      return await this.contract['getFeeV2(address,uint32)'](p, gasLimit);
     }
     return await this.contract.getFee(p);
   }
@@ -388,12 +389,13 @@ export class DiceProtocol {
 
   /**
    * Construct a provider commitment from a revelation and the number of hashes.
-   * Repeatedly hashes the revelation `numHashes` times.
+   * Repeatedly hashes the revelation `numHashes` times, each value as a full bytes32
+   * (as the contract does), so a value that starts with a zero byte is not shortened.
    */
   static constructProviderCommitment(numHashes: number, revelation: string): string {
     let current = revelation;
     for (let i = 0; i < numHashes; i++) {
-      current = ethers.keccak256(ethers.toBeHex(current));
+      current = ethers.keccak256(ethers.zeroPadValue(current, 32));
     }
     return current;
   }
