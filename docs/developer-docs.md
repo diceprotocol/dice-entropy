@@ -78,7 +78,7 @@ When the chain runs low, the provider registers a new chain via `registerFor()`.
 | Foundry (forge, cast) | ≥ 0.2.0 | `curl -L https://foundry.paradigm.xyz \| bash && foundryup` |
 | Solidity Compiler | 0.8.24 | Bundled with Foundry |
 | OpenZeppelin Contracts | ^5.0 | `forge install OpenZeppelin/openzeppelin-contracts` |
-| ExcessivelySafeCall | latest | `forge install nomiclabs/ExcessivelySafeCall` |
+| ExcessivelySafeCall | latest | `forge install nomad-xyz/ExcessivelySafeCall` |
 
 **Remappings** (`contracts/remappings.txt`):
 
